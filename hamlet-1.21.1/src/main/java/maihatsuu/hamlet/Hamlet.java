@@ -1,6 +1,8 @@
 package maihatsuu.hamlet;
 
+import maihatsuu.hamlet.command.HamletCommands;
 import maihatsuu.hamlet.data.ProfessionDataLoader;
+import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletProfessions;
 
 import net.fabricmc.api.ModInitializer;
@@ -23,6 +25,8 @@ public class Hamlet implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		HamletProfessions.init();
+		VillagerTradeMenu.init();
+		HamletCommands.register();
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ProfessionDataLoader());
 	}
 

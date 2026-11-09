@@ -1,15 +1,24 @@
 package maihatsuu.hamlet.mixin;
 
+import java.util.Optional;
+
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+
+import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
+import maihatsuu.hamlet.villager.VillagerReadiness;
 import maihatsuu.hamlet.villager.VillagerRules;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerData;
 import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.trading.MerchantOffers;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -57,6 +66,32 @@ abstract class VillagerMixin implements HamletVillager {
 	@ModifyVariable(method = "setVillagerData", at = @At("HEAD"), argsOnly = true)
 	private VillagerData hamlet$normalize(VillagerData data) {
 		return VillagerRules.normalize(data);
+	}
+
+	// Vanilla refuses to trade when the villager has no offers. Hamlet never gives it any, so this check
+	// becomes "can't trade right now" and vanilla's head shake and early return still apply.
+	@ModifyExpressionValue(
+		method = "mobInteract",
+		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/trading/MerchantOffers;isEmpty()Z")
+	)
+	private boolean hamlet$refuseTrade(boolean noOffers, Player player, InteractionHand hand) {
+		Villager self = (Villager) (Object) this;
+		VillagerProfession profession = self.getVillagerData().getProfession();
+		if (profession == VillagerProfession.NONE || profession == VillagerProfession.NITWIT) {
+			return true;
+		}
+
+		Optional<Component> refusal = VillagerReadiness.refusal(self);
+		if (refusal.isPresent() && hand == InteractionHand.MAIN_HAND) {
+			player.displayClientMessage(refusal.get(), true);
+		}
+		return refusal.isPresent();
+	}
+
+	@Inject(method = "startTrading", at = @At("HEAD"), cancellable = true)
+	private void hamlet$openTradeMenu(Player player, CallbackInfo ci) {
+		VillagerTradeMenu.open((Villager) (Object) this, player);
+		ci.cancel();
 	}
 
 	@Inject(method = "updateTrades", at = @At("HEAD"), cancellable = true)

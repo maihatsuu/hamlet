@@ -13,6 +13,7 @@ import net.minecraft.world.item.Item;
 public record ProfessionData(Map<Item, Integer> prices, int workInterval) {
 	/** One in-game hour. */
 	public static final int DEFAULT_WORK_INTERVAL = 1000;
+	public static final int DEFAULT_PRICE = 1;
 	public static final ProfessionData EMPTY = new ProfessionData(Map.of(), DEFAULT_WORK_INTERVAL);
 
 	public static final Codec<ProfessionData> CODEC = RecordCodecBuilder.create(instance -> instance.group(

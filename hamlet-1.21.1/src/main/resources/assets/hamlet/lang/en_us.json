@@ -1,4 +1,12 @@
 {
 	"entity.minecraft.villager.beekeeper": "Beekeeper",
-	"entity.minecraft.villager.archaeologist": "Archaeologist"
+	"entity.minecraft.villager.archaeologist": "Archaeologist",
+	"hamlet.trade.tab.stock": "Stock",
+	"hamlet.trade.tab.service": "Service",
+	"hamlet.trade.no_services": "No services offered",
+	"hamlet.trade.price": "Price: %s emerald(s) each",
+	"hamlet.trade.buy_hint": "Click to buy one, shift-click for the stack",
+	"hamlet.trade.cannot_afford": "Not enough emeralds",
+	"hamlet.command.not_a_villager": "That entity isn't a villager",
+	"hamlet.command.stock_added": "Added %s item(s) to stock"
 }
