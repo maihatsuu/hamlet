@@ -3,6 +3,9 @@ package maihatsuu.hamlet.client.screen;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jetbrains.annotations.Nullable;
+
+import maihatsuu.hamlet.trade.Service;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
 
@@ -27,6 +30,8 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 
 	private Button stockTab;
 	private Button serviceTab;
+	@Nullable
+	private Button serviceButton;
 
 	public VillagerTradeScreen(VillagerTradeMenu menu, Inventory inventory, Component title) {
 		super(menu, inventory, title);
@@ -48,6 +53,15 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 				.bounds(this.leftPos + TAB_WIDTH, y, TAB_WIDTH, TAB_HEIGHT)
 				.build()
 		);
+		Service service = this.menu.getService();
+		if (service != null) {
+			this.serviceButton = this.addRenderableWidget(
+				Button.builder(Component.translatable(service.labelKey), button -> this.minecraft.gameMode
+						.handleInventoryButtonClick(this.menu.containerId, VillagerTradeMenu.SERVICE_BUTTON))
+					.bounds(this.leftPos + 13, this.topPos + 42, 150, TAB_HEIGHT)
+					.build()
+			);
+		}
 		this.showStock(this.menu.stockVisible);
 	}
 
@@ -55,6 +69,9 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 		this.menu.stockVisible = visible;
 		this.stockTab.active = !visible;
 		this.serviceTab.active = visible;
+		if (this.serviceButton != null) {
+			this.serviceButton.visible = !visible;
+		}
 	}
 
 	@Override
@@ -73,7 +90,7 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 	@Override
 	protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
 		super.renderLabels(graphics, mouseX, mouseY);
-		if (!this.menu.stockVisible) {
+		if (!this.menu.stockVisible && this.menu.getService() == null) {
 			int x = (this.imageWidth - this.font.width(NO_SERVICES)) / 2;
 			graphics.drawString(this.font, NO_SERVICES, x, 40, 0x404040, false);
 		}

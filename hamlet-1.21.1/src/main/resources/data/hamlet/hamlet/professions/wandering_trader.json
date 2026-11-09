@@ -1,0 +1,27 @@
+{
+	"prices": {
+		"minecraft:oak_sapling": 2,
+		"minecraft:spruce_sapling": 2,
+		"minecraft:birch_sapling": 2,
+		"minecraft:jungle_sapling": 2,
+		"minecraft:acacia_sapling": 2,
+		"minecraft:dark_oak_sapling": 2,
+		"minecraft:cherry_sapling": 3,
+		"minecraft:mangrove_propagule": 3,
+		"minecraft:tube_coral_block": 3,
+		"minecraft:brain_coral_block": 3,
+		"minecraft:bubble_coral_block": 3,
+		"minecraft:fire_coral_block": 3,
+		"minecraft:horn_coral_block": 3,
+		"minecraft:wheat_seeds": 1,
+		"minecraft:beetroot_seeds": 1,
+		"minecraft:pumpkin_seeds": 1,
+		"minecraft:melon_seeds": 1,
+		"minecraft:torchflower_seeds": 3,
+		"minecraft:pitcher_pod": 3,
+		"minecraft:sunflower": 1,
+		"minecraft:lilac": 1,
+		"minecraft:rose_bush": 1,
+		"minecraft:peony": 1
+	}
+}
