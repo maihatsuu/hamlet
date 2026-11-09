@@ -3,9 +3,12 @@
 	"package": "maihatsuu.hamlet.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
+		"HarvestFarmlandMixin",
+		"PoiTypesMixin",
+		"SheepAccessor",
 		"TradeWithVillagerMixin",
+		"VillagerGoalPackagesMixin",
 		"VillagerMixin",
-		"WorkAtComposterMixin",
 		"ZombieMixin"
 	],
 	"injectors": {

@@ -1,0 +1,28 @@
+{
+	"work_interval": 1000,
+	"prices": {
+		"minecraft:cod": 1,
+		"minecraft:salmon": 1,
+		"minecraft:tropical_fish": 2,
+		"minecraft:pufferfish": 2,
+		"minecraft:lily_pad": 1,
+		"minecraft:bowl": 1,
+		"minecraft:leather": 1,
+		"minecraft:leather_boots": 1,
+		"minecraft:rotten_flesh": 1,
+		"minecraft:stick": 1,
+		"minecraft:string": 1,
+		"minecraft:potion": 1,
+		"minecraft:bone": 1,
+		"minecraft:ink_sac": 1,
+		"minecraft:tripwire_hook": 1,
+		"minecraft:bamboo": 1,
+		"minecraft:cocoa_beans": 1,
+		"minecraft:bow": 8,
+		"minecraft:fishing_rod": 8,
+		"minecraft:enchanted_book": 16,
+		"minecraft:name_tag": 16,
+		"minecraft:nautilus_shell": 8,
+		"minecraft:saddle": 16
+	}
+}

@@ -2,8 +2,11 @@
 	"work_interval": 1000,
 	"prices": {
 		"minecraft:wheat": 1,
+		"minecraft:wheat_seeds": 1,
 		"minecraft:carrot": 1,
 		"minecraft:potato": 1,
-		"minecraft:beetroot": 1
+		"minecraft:poisonous_potato": 1,
+		"minecraft:beetroot": 1,
+		"minecraft:beetroot_seeds": 1
 	}
 }
