@@ -14,6 +14,7 @@
 	"hamlet.refusal.not_slept": "Hasn't slept",
 	"hamlet.refusal.not_socialized": "Hasn't socialized",
 	"hamlet.refusal.cramped": "Too cramped to work",
+	"hamlet.command.ore_count": "Diamond ore: %s, emerald ore: %s",
 	"hamlet.command.readiness": "Grace: %s, slept: %s, socialized: %s, space: %s",
 	"hamlet.command.grace_ended": "Grace period ended",
 	"hamlet.command.not_a_villager": "That entity isn't a villager",

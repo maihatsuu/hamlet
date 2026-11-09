@@ -56,7 +56,7 @@ Nobody buys from the player, so emeralds come from loot, mining and raids. Emera
 match:
 
 - As common as diamonds, at diamond depth.
-- Twice as common as diamonds in mountain biomes.
+- Mountain biomes also get diamond-sized veins up in the peaks, at vanilla emerald's height range.
 
 ## Villages
 
@@ -95,4 +95,4 @@ including ones for the new professions (so beehives and decorated pots actually 
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Breeding works with player food and doesn't happen without it.
 - New villages contain the new houses and no retired ones.
-- Emerald ore rates match diamonds at depth and double in mountains.
+- Emerald ore rates match diamonds at depth everywhere, and mountains also have veins in their peaks.
