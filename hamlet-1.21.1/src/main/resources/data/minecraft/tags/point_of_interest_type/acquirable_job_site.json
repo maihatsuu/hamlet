@@ -1,0 +1,12 @@
+{
+	"replace": true,
+	"values": [
+		"minecraft:cartographer",
+		"minecraft:cleric",
+		"minecraft:farmer",
+		"minecraft:fisherman",
+		"minecraft:librarian",
+		"minecraft:shepherd",
+		"hamlet:archaeologist"
+	]
+}
