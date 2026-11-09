@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
+import maihatsuu.hamlet.villager.ReadinessState;
 import maihatsuu.hamlet.villager.VillagerReadiness;
 import maihatsuu.hamlet.villager.VillagerRules;
 
@@ -36,15 +37,41 @@ abstract class VillagerMixin implements HamletVillager {
 	@Unique
 	private final SimpleContainer hamlet$stock = new SimpleContainer(STOCK_SIZE);
 
+	@Unique
+	private static final String READINESS_KEY = "hamlet:Readiness";
+
+	@Unique
+	private final ReadinessState hamlet$readiness = new ReadinessState();
+
 	@Override
 	public SimpleContainer hamlet$getStock() {
 		return this.hamlet$stock;
+	}
+
+	@Override
+	public ReadinessState hamlet$getReadiness() {
+		return this.hamlet$readiness;
+	}
+
+	@Inject(method = "customServerAiStep", at = @At("TAIL"))
+	private void hamlet$tickReadiness(CallbackInfo ci) {
+		VillagerReadiness.tick((Villager) (Object) this);
+	}
+
+	@Inject(method = "setVillagerData", at = @At("HEAD"))
+	private void hamlet$restartGraceOnNewJob(VillagerData data, CallbackInfo ci) {
+		Villager self = (Villager) (Object) this;
+		VillagerProfession profession = data.getProfession();
+		if (profession != VillagerProfession.NONE && profession != self.getVillagerData().getProfession()) {
+			this.hamlet$readiness.restartGrace(self.level().getGameTime());
+		}
 	}
 
 	@Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
 	private void hamlet$saveStock(CompoundTag tag, CallbackInfo ci) {
 		Villager self = (Villager) (Object) this;
 		tag.put(STOCK_KEY, this.hamlet$stock.createTag(self.registryAccess()));
+		tag.put(READINESS_KEY, this.hamlet$readiness.save());
 	}
 
 	// Loading writes the villager data directly, so it doesn't pass through setVillagerData.
@@ -52,6 +79,7 @@ abstract class VillagerMixin implements HamletVillager {
 	private void hamlet$loadAndNormalize(CompoundTag tag, CallbackInfo ci) {
 		Villager self = (Villager) (Object) this;
 		this.hamlet$stock.fromTag(tag.getList(STOCK_KEY, Tag.TAG_COMPOUND), self.registryAccess());
+		this.hamlet$readiness.load(tag.getCompound(READINESS_KEY));
 
 		VillagerProfession savedProfession = self.getVillagerData().getProfession();
 		self.setVillagerData(self.getVillagerData());

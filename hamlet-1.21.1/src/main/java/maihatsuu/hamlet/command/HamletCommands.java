@@ -8,6 +8,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import maihatsuu.hamlet.villager.HamletVillager;
+import maihatsuu.hamlet.villager.VillagerReadiness;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 
@@ -16,6 +17,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ItemStack;
 
 public final class HamletCommands {
@@ -32,7 +34,39 @@ public final class HamletCommands {
 						.then(argument("item", ItemArgument.item(buildContext))
 							.then(argument("count", IntegerArgumentType.integer(1, 64))
 								.executes(HamletCommands::addStock)))))
+				.then(literal("readiness")
+					.then(argument("villager", EntityArgument.entity())
+						.executes(HamletCommands::showReadiness)
+						.then(literal("end_grace")
+							.executes(HamletCommands::endGrace))))
 		));
+	}
+
+	private static int showReadiness(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		if (!(EntityArgument.getEntity(context, "villager") instanceof Villager villager)) {
+			context.getSource().sendFailure(Component.translatable("hamlet.command.not_a_villager"));
+			return 0;
+		}
+
+		context.getSource().sendSuccess(() -> Component.translatable(
+			"hamlet.command.readiness",
+			VillagerReadiness.inGrace(villager),
+			VillagerReadiness.hasSlept(villager),
+			VillagerReadiness.hasSocialized(villager),
+			VillagerReadiness.hasSpace(villager)
+		), false);
+		return 1;
+	}
+
+	private static int endGrace(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		if (!(EntityArgument.getEntity(context, "villager") instanceof Villager villager)) {
+			context.getSource().sendFailure(Component.translatable("hamlet.command.not_a_villager"));
+			return 0;
+		}
+
+		VillagerReadiness.endGrace(villager);
+		context.getSource().sendSuccess(() -> Component.translatable("hamlet.command.grace_ended"), false);
+		return 1;
 	}
 
 	private static int addStock(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

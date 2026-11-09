@@ -8,4 +8,6 @@ public interface HamletVillager {
 
 	/** What the villager has produced and can sell. Separate from vanilla's inventory, which holds its food. */
 	SimpleContainer hamlet$getStock();
+
+	ReadinessState hamlet$getReadiness();
 }
