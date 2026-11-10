@@ -7,6 +7,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.datafixers.util.Pair;
 
 import maihatsuu.hamlet.work.FarmCrops;
+import maihatsuu.hamlet.work.GoFishing;
 import maihatsuu.hamlet.work.ProfessionWork;
 
 import net.minecraft.world.entity.EntityType;
@@ -15,8 +16,6 @@ import net.minecraft.world.entity.ai.behavior.DoNothing;
 import net.minecraft.world.entity.ai.behavior.GiveGiftToHero;
 import net.minecraft.world.entity.ai.behavior.RunOne;
 import net.minecraft.world.entity.ai.behavior.SetEntityLookTarget;
-import net.minecraft.world.entity.ai.behavior.SetLookAndInteract;
-import net.minecraft.world.entity.ai.behavior.ShowTradesToPlayer;
 import net.minecraft.world.entity.ai.behavior.UpdateActivityFromSchedule;
 import net.minecraft.world.entity.ai.behavior.ValidateNearbyPoi;
 import net.minecraft.world.entity.ai.behavior.VillagerGoalPackages;
@@ -26,6 +25,7 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(VillagerGoalPackages.class)
@@ -49,26 +49,38 @@ abstract class VillagerGoalPackagesMixin {
 		return original.call(new ProfessionWork(profession), weight);
 	}
 
-	// Farmers spend their whole work period patrolling their field, instead of vanilla's random mix of
-	// strolling, composting, harvesting and bone meal. The look behaviour copies vanilla's private one.
+	// Farmers patrol their field and fishermen fish for their whole work period, instead of vanilla's
+	// random mix of strolling and workstation visits.
 	@ModifyReturnValue(method = "getWorkPackage", at = @At("RETURN"))
-	private static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> hamlet$farmerPatrols(
+	private static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> hamlet$dedicatedWork(
 		ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> work,
 		VillagerProfession profession,
 		float speed
 	) {
-		if (profession != VillagerProfession.FARMER) {
-			return work;
+		if (profession == VillagerProfession.FARMER) {
+			return hamlet$workPackage(new FarmCrops(speed));
 		}
+		if (profession == VillagerProfession.FISHERMAN) {
+			return hamlet$workPackage(new GoFishing(speed));
+		}
+		return work;
+	}
+
+	// The look behaviour copies vanilla's private getMinimalLookBehavior. Vanilla's ShowTradesToPlayer is
+	// left out: with no offers to show, it empties the villager's hand every tick a player is nearby, which
+	// took the fisherman's rod away. SetLookAndInteract goes with it, since only ShowTradesToPlayer clears
+	// the interaction target it sets.
+	@Unique
+	private static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> hamlet$workPackage(
+		BehaviorControl<? super Villager> job
+	) {
 		return ImmutableList.of(
 			Pair.of(5, new RunOne<>(ImmutableList.of(
 				Pair.of(SetEntityLookTarget.create(EntityType.VILLAGER, 8.0F), 2),
 				Pair.of(SetEntityLookTarget.create(EntityType.PLAYER, 8.0F), 2),
 				Pair.of(new DoNothing(30, 60), 8)
 			))),
-			Pair.of(5, new FarmCrops(speed)),
-			Pair.of(10, new ShowTradesToPlayer(400, 1600)),
-			Pair.of(10, SetLookAndInteract.create(EntityType.PLAYER, 4)),
+			Pair.of(5, job),
 			Pair.of(3, new GiveGiftToHero(100)),
 			Pair.of(99, UpdateActivityFromSchedule.create())
 		);

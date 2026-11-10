@@ -1,6 +1,7 @@
 {
 	"entity.minecraft.villager.beekeeper": "Beekeeper",
 	"entity.minecraft.villager.archaeologist": "Archaeologist",
+	"entity.hamlet.fishing_bobber": "Villager Fishing Bobber",
 	"hamlet.trade.tab.stock": "Stock",
 	"hamlet.trade.tab.service": "Service",
 	"hamlet.trade.no_services": "No services offered",

@@ -35,7 +35,7 @@ Only these professions exist; all others are deprecated.
 | Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away. | Stock: harvest output. No longer makes bread or shares food. |
 | Shepherd | Loom | Shears sheep, milks cows, gathers eggs. | Stock: wool, milk, eggs. |
 | Beekeeper | Beehive | Gathers from nearby hives. | Stock: honey bottles, honeycomb. |
-| Fisherman | Barrel | Fishes nearby water using the fishing loot tables. Treasure catches need open water nearby (vanilla's open-water check). | Stock: everything it catches, including treasure. |
+| Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores the catch from the fishing loot tables. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
 | Librarian | Lectern | Copies the book on its lectern. | Sells copies of written books and Archive tomes. Designed together with Archive. |
 | Cartographer | Cartography table | | Sells explorer maps for the most important structures. |
 | Archaeologist | Decorated pot | | Service: duplicate a smithing template. Template + 1 emerald = 2 templates. Vanilla's duplication recipes are removed. |
@@ -67,6 +67,7 @@ including ones for the new professions (so beehives and decorated pots actually 
 - **Prices:** what do Stock items and maps cost, and are they fixed or data-driven?
 - **Stock limits:** does a full inventory stop a villager working? How much can each hold?
 - **Work rates:** how often does each profession produce? (Keeps output from outpacing normal farms.)
+  A fisherman on vanilla bite timing makes about 20 catches per working day.
 - **Good food:** how do players give villagers food now that they don't pick items up? Which foods
   count, and how much is enough?
 - **Workstations:** decide what happens if a workstation is moved rather than destroyed. Carry On can
@@ -92,6 +93,7 @@ including ones for the new professions (so beehives and decorated pots actually 
 - Villagers ignore items dropped on the ground.
 - Cleric takes exactly 1 level and 1 emerald per bottle. Archaeologist returns 2 templates, and the
   crafting recipe is gone.
+- Fisherman walks to the shore, holds a rod, casts a bobber, and each bite adds a catch to its stock.
 - Fisherman only catches treasure near open water.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Breeding works with player food and doesn't happen without it.

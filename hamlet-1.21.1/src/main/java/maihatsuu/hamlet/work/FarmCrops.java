@@ -179,7 +179,7 @@ public final class FarmCrops extends Behavior<Villager> {
 	}
 
 	/** Crop blocks have no collision, so a villager can stand in one, on top of the farmland. */
-	private static boolean canStandAt(ServerLevel level, BlockPos pos) {
+	static boolean canStandAt(ServerLevel level, BlockPos pos) {
 		BlockPos below = pos.below();
 		return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()
 			&& level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty()

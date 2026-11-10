@@ -1,6 +1,5 @@
 package maihatsuu.hamlet.work;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,11 +14,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.FluidTags;
+
 import net.minecraft.tags.StructureTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.SimpleContainer;
@@ -37,21 +36,19 @@ import net.minecraft.world.item.MapItem;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraft.world.level.material.FluidState;
+
 import net.minecraft.world.level.saveddata.maps.MapDecorationType;
 import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraft.world.level.storage.loot.BuiltInLootTables;
-import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+
+
+
+
+
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 
 /** What each working profession does when it uses its workstation. */
 final class Jobs {
@@ -59,19 +56,10 @@ final class Jobs {
 	private static final long ANIMAL_COOLDOWN_TICKS = 6000L;
 	private static final int HIVE_RADIUS = 16;
 	private static final int HONEYCOMB_PER_HIVE = 3;
-	private static final int WATER_RADIUS = 8;
-	private static final int WATER_DEPTH = 3;
-	private static final int WATER_RISE = 1;
 
-	// The same weights as vanilla's gameplay/fishing table.
-	private static final int JUNK_WEIGHT = 10;
-	private static final int TREASURE_WEIGHT = 5;
-	private static final int FISH_WEIGHT = 85;
-
-	// Farmers aren't here: they patrol their field instead (see FarmCrops and Crops).
+	// Farmers and fishermen aren't here: they have their own behaviours (FarmCrops and GoFishing).
 	private static final Map<VillagerProfession, Job> JOBS = Map.of(
 		VillagerProfession.SHEPHERD, Jobs::tendAnimals,
-		VillagerProfession.FISHERMAN, Jobs::fish,
 		VillagerProfession.LIBRARIAN, Jobs::copyBook,
 		VillagerProfession.CARTOGRAPHER, Jobs::makeMap,
 		HamletProfessions.BEEKEEPER, Jobs::gatherHoney
@@ -150,83 +138,6 @@ final class Jobs {
 		return state.getBlock() instanceof BeehiveBlock && state.getValue(BeehiveBlock.HONEY_LEVEL) >= BeehiveBlock.MAX_HONEY_LEVELS;
 	}
 
-	private static boolean fish(ServerLevel level, BlockPos site, SimpleContainer stock) {
-		List<BlockPos> surface = new ArrayList<>();
-		for (BlockPos pos : BlockPos.betweenClosed(
-			site.offset(-WATER_RADIUS, -WATER_DEPTH, -WATER_RADIUS),
-			site.offset(WATER_RADIUS, WATER_RISE, WATER_RADIUS)
-		)) {
-			if (level.isLoaded(pos) && isWaterSource(level.getFluidState(pos)) && level.getBlockState(pos.above()).isAir()) {
-				surface.add(pos.immutable());
-			}
-		}
-		if (surface.isEmpty()) {
-			return false;
-		}
-
-		BlockPos spot = surface.get(level.random.nextInt(surface.size()));
-		LootTable table = level.getServer().reloadableRegistries().getLootTable(rollCatch(level, isOpenWater(level, spot)));
-		LootParams params = new LootParams.Builder(level)
-			.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(spot))
-			.withParameter(LootContextParams.TOOL, new ItemStack(Items.FISHING_ROD))
-			.create(LootContextParamSets.FISHING);
-		table.getRandomItems(params).forEach(stock::addItem);
-		return true;
-	}
-
-	private static ResourceKey<LootTable> rollCatch(ServerLevel level, boolean openWater) {
-		int treasureWeight = openWater ? TREASURE_WEIGHT : 0;
-		int roll = level.random.nextInt(JUNK_WEIGHT + treasureWeight + FISH_WEIGHT);
-		if (roll < JUNK_WEIGHT) {
-			return BuiltInLootTables.FISHING_JUNK;
-		}
-		return roll < JUNK_WEIGHT + treasureWeight ? BuiltInLootTables.FISHING_TREASURE : BuiltInLootTables.FISHING_FISH;
-	}
-
-	// Ported from FishingHook.calculateOpenWater, which needs a hook entity.
-	private static boolean isOpenWater(ServerLevel level, BlockPos pos) {
-		WaterLayer previous = WaterLayer.INVALID;
-		for (int y = -1; y <= 2; y++) {
-			WaterLayer layer = classifyLayer(level, pos.offset(-2, y, -2), pos.offset(2, y, 2));
-			if (layer == WaterLayer.INVALID
-				|| layer == WaterLayer.ABOVE_WATER && previous == WaterLayer.INVALID
-				|| layer == WaterLayer.INSIDE_WATER && previous == WaterLayer.ABOVE_WATER) {
-				return false;
-			}
-			previous = layer;
-		}
-		return true;
-	}
-
-	private static WaterLayer classifyLayer(ServerLevel level, BlockPos from, BlockPos to) {
-		WaterLayer result = null;
-		for (BlockPos pos : BlockPos.betweenClosed(from, to)) {
-			WaterLayer layer = classifyBlock(level, pos);
-			if (result != null && layer != result) {
-				return WaterLayer.INVALID;
-			}
-			result = layer;
-		}
-		return result == null ? WaterLayer.INVALID : result;
-	}
-
-	private static WaterLayer classifyBlock(ServerLevel level, BlockPos pos) {
-		if (!level.isLoaded(pos)) {
-			return WaterLayer.INVALID;
-		}
-		BlockState state = level.getBlockState(pos);
-		if (state.isAir() || state.is(Blocks.LILY_PAD)) {
-			return WaterLayer.ABOVE_WATER;
-		}
-		return isWaterSource(state.getFluidState()) && state.getCollisionShape(level, pos).isEmpty()
-			? WaterLayer.INSIDE_WATER
-			: WaterLayer.INVALID;
-	}
-
-	private static boolean isWaterSource(FluidState fluid) {
-		return fluid.is(FluidTags.WATER) && fluid.isSource();
-	}
-
 	/** Keeps one of each explorer map in stock, so buying one is what prompts the next. */
 	private static boolean makeMap(ServerLevel level, BlockPos site, SimpleContainer stock) {
 		MapTargetCache cache = MapTargetCache.get(level);
@@ -280,11 +191,5 @@ final class Jobs {
 	}
 
 	private record ExplorerMap(TagKey<Structure> structure, String name, Holder<MapDecorationType> decoration) {
-	}
-
-	private enum WaterLayer {
-		ABOVE_WATER,
-		INSIDE_WATER,
-		INVALID
 	}
 }
