@@ -32,7 +32,7 @@ Only these professions exist; all others are deprecated.
 
 | Profession | Workstation | Work | Sells / services |
 |---|---|---|---|
-| Farmer | Composter | Farms automatically. Resets crops to stage 1 in place, so crop layouts stay exactly as the player planted them. No seed cost. | Stock: harvest output. No longer makes bread or shares food. |
+| Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away. | Stock: harvest output. No longer makes bread or shares food. |
 | Shepherd | Loom | Shears sheep, milks cows, gathers eggs. | Stock: wool, milk, eggs. |
 | Beekeeper | Beehive | Gathers from nearby hives. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Fishes nearby water using the fishing loot tables. Treasure catches need open water nearby (vanilla's open-water check). | Stock: everything it catches, including treasure. |
@@ -45,6 +45,9 @@ Only these professions exist; all others are deprecated.
 ## Breeding
 
 Villagers breed when they have enough good food, provided by the player. Farmers no longer supply it.
+
+Villagers never pick items up off the ground, which is how vanilla villagers get food, so breeding is
+disabled until a way to feed them is chosen.
 
 ## Emeralds
 
@@ -64,7 +67,8 @@ including ones for the new professions (so beehives and decorated pots actually 
 - **Prices:** what do Stock items and maps cost, and are they fixed or data-driven?
 - **Stock limits:** does a full inventory stop a villager working? How much can each hold?
 - **Work rates:** how often does each profession produce? (Keeps output from outpacing normal farms.)
-- **Good food:** which foods count, and how much is enough?
+- **Good food:** how do players give villagers food now that they don't pick items up? Which foods
+  count, and how much is enough?
 - **Workstations:** decide what happens if a workstation is moved rather than destroyed. Carry On can
   lift lecterns, barrels and similar blocks (Carry On may be removed from the pack anyway). Decorated
   pots also shatter when hit by projectiles, which would cost the villager its job.
@@ -83,7 +87,9 @@ including ones for the new professions (so beehives and decorated pots actually 
 - Remove a villager's bed: it stops working, its trade screen says "no bed", it still sells its
   stock, and it resumes once it claims a new bed.
 - Stock tab matches what the villager actually produced; buying removes it.
-- Farmer leaves a mixed crop layout unchanged after harvesting.
+- Farmer patrols its field, harvests mature crops one at a time, and leaves a mixed crop layout
+  unchanged. Crops more than 9 blocks from its composter are left alone.
+- Villagers ignore items dropped on the ground.
 - Cleric takes exactly 1 level and 1 emerald per bottle. Archaeologist returns 2 templates, and the
   crafting recipe is gone.
 - Fisherman only catches treasure near open water.

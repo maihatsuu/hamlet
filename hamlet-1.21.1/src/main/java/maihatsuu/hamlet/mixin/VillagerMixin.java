@@ -14,6 +14,7 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerData;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffers;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Villager.class)
 abstract class VillagerMixin implements HamletVillager {
@@ -90,6 +92,13 @@ abstract class VillagerMixin implements HamletVillager {
 	private boolean hamlet$refuseTrade(boolean noOffers) {
 		VillagerProfession profession = ((Villager) (Object) this).getVillagerData().getProfession();
 		return profession == VillagerProfession.NONE || profession == VillagerProfession.NITWIT;
+	}
+
+	// Covers both pickup paths: Mob.aiStep checks this before picking items up, and the item sensor
+	// behind GoToWantedItem filters by it.
+	@Inject(method = "wantsToPickUp", at = @At("HEAD"), cancellable = true)
+	private void hamlet$noItemPickup(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+		cir.setReturnValue(false);
 	}
 
 	@Inject(method = "startTrading", at = @At("HEAD"), cancellable = true)

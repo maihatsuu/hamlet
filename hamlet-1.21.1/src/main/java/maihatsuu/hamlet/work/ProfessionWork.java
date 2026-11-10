@@ -43,7 +43,7 @@ public final class ProfessionWork extends WorkAtPoi {
 		});
 	}
 
-	private static boolean isFull(SimpleContainer stock) {
+	static boolean isFull(SimpleContainer stock) {
 		for (int slot = 0; slot < stock.getContainerSize(); slot++) {
 			if (stock.getItem(slot).isEmpty()) {
 				return false;

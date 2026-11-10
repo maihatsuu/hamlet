@@ -38,7 +38,6 @@ import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.Structure;
@@ -56,9 +55,6 @@ import net.minecraft.world.phys.Vec3;
 
 /** What each working profession does when it uses its workstation. */
 final class Jobs {
-	private static final int FARM_RADIUS = 9;
-	private static final int FARM_HEIGHT = 2;
-	private static final int MAX_CROPS_PER_ACTION = 8;
 	private static final int ANIMAL_RADIUS = 8;
 	private static final long ANIMAL_COOLDOWN_TICKS = 6000L;
 	private static final int HIVE_RADIUS = 16;
@@ -72,8 +68,8 @@ final class Jobs {
 	private static final int TREASURE_WEIGHT = 5;
 	private static final int FISH_WEIGHT = 85;
 
+	// Farmers aren't here: they patrol their field instead (see FarmCrops and Crops).
 	private static final Map<VillagerProfession, Job> JOBS = Map.of(
-		VillagerProfession.FARMER, Jobs::farm,
 		VillagerProfession.SHEPHERD, Jobs::tendAnimals,
 		VillagerProfession.FISHERMAN, Jobs::fish,
 		VillagerProfession.LIBRARIAN, Jobs::copyBook,
@@ -96,30 +92,6 @@ final class Jobs {
 	@Nullable
 	static Job forProfession(VillagerProfession profession) {
 		return JOBS.get(profession);
-	}
-
-	private static boolean farm(ServerLevel level, BlockPos site, SimpleContainer stock) {
-		int harvested = 0;
-		for (BlockPos pos : BlockPos.betweenClosed(
-			site.offset(-FARM_RADIUS, -FARM_HEIGHT, -FARM_RADIUS),
-			site.offset(FARM_RADIUS, FARM_HEIGHT, FARM_RADIUS)
-		)) {
-			if (harvested >= MAX_CROPS_PER_ACTION) {
-				break;
-			}
-			if (!level.isLoaded(pos)) {
-				continue;
-			}
-
-			BlockState state = level.getBlockState(pos);
-			if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
-				BlockPos cropPos = pos.immutable();
-				Block.getDrops(state, level, cropPos, null).forEach(stock::addItem);
-				level.setBlock(cropPos, crop.getStateForAge(0), Block.UPDATE_ALL);
-				harvested++;
-			}
-		}
-		return harvested > 0;
 	}
 
 	private static boolean tendAnimals(ServerLevel level, BlockPos site, SimpleContainer stock) {
