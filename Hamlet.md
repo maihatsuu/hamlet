@@ -19,16 +19,12 @@ Needs to be installed on both server and client (custom trading screen).
 - **Zombification:** a villager killed by a zombie always turns into a zombie villager, on every
   difficulty.
 
-## Work and trade requirements
+## Work requirements
 
-A villager only works and trades if it has:
+A villager only works if it has claimed both a **bed** and a **workstation**. Trading has no
+requirements: a villager will always sell what's already in its stock.
 
-- **Slept** the previous night (nightly sleep in a bed).
-- **Socialized** with other villagers.
-- **Space to move**, so cramped trading halls don't work.
-
-When a villager refuses, the player gets a hint as to why (e.g. "Hasn't slept"). New or moved villagers
-get a grace period.
+When a villager isn't working, its trade screen title says why (e.g. "Not working: no bed").
 
 ## Professions
 
@@ -68,7 +64,6 @@ including ones for the new professions (so beehives and decorated pots actually 
 - **Prices:** what do Stock items and maps cost, and are they fixed or data-driven?
 - **Stock limits:** does a full inventory stop a villager working? How much can each hold?
 - **Work rates:** how often does each profession produce? (Keeps output from outpacing normal farms.)
-- **Requirements:** how much socializing counts, how much space, and how long is the grace period?
 - **Good food:** which foods count, and how much is enough?
 - **Workstations:** decide what happens if a workstation is moved rather than destroyed. Carry On can
   lift lecterns, barrels and similar blocks (Carry On may be removed from the pack anyway). Decorated
@@ -85,8 +80,8 @@ including ones for the new professions (so beehives and decorated pots actually 
 ## Testing
 
 - Place and break a workstation: job is gained and lost, with no trading involved.
-- Remove a bed, separate a villager from others, box one in: each refuses work with the right hint,
-  and recovers once fixed.
+- Remove a villager's bed: it stops working, its trade screen says "no bed", it still sells its
+  stock, and it resumes once it claims a new bed.
 - Stock tab matches what the villager actually produced; buying removes it.
 - Farmer leaves a mixed crop layout unchanged after harvesting.
 - Cleric takes exactly 1 level and 1 emerald per bottle. Archaeologist returns 2 templates, and the

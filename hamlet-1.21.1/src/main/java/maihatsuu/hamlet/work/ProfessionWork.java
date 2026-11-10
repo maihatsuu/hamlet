@@ -2,8 +2,7 @@ package maihatsuu.hamlet.work;
 
 import maihatsuu.hamlet.data.ProfessionDataLoader;
 import maihatsuu.hamlet.villager.HamletVillager;
-import maihatsuu.hamlet.villager.ReadinessState;
-import maihatsuu.hamlet.villager.VillagerReadiness;
+import maihatsuu.hamlet.villager.WorkRequirements;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.SimpleContainer;
@@ -23,21 +22,23 @@ public final class ProfessionWork extends WorkAtPoi {
 	@Override
 	protected void useWorkstation(ServerLevel level, Villager villager) {
 		Job job = Jobs.forProfession(this.profession);
-		if (job == null || VillagerReadiness.refusal(villager).isPresent()) {
+		if (job == null || WorkRequirements.missing(villager).isPresent()) {
 			return;
 		}
 
 		HamletVillager hamletVillager = (HamletVillager) villager;
 		SimpleContainer stock = hamletVillager.hamlet$getStock();
-		ReadinessState state = hamletVillager.hamlet$getReadiness();
 		long now = level.getGameTime();
-		if (isFull(stock) || !state.isWorkDue(now, ProfessionDataLoader.get(this.profession).workInterval())) {
+		long lastWorked = hamletVillager.hamlet$getLastWorked();
+		int interval = ProfessionDataLoader.get(this.profession).workInterval();
+		boolean due = lastWorked == HamletVillager.NEVER_WORKED || now - lastWorked >= interval;
+		if (isFull(stock) || !due) {
 			return;
 		}
 
 		villager.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(site -> {
 			if (job.run(level, site.pos(), stock)) {
-				state.markWorked(now);
+				hamletVillager.hamlet$setLastWorked(now);
 			}
 		});
 	}

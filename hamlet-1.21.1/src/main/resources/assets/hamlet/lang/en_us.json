@@ -11,12 +11,10 @@
 	"hamlet.service.bottle_experience": "Bottle 1 level: 1 emerald",
 	"hamlet.service.needs_template": "Place a smithing template in the slot",
 	"hamlet.service.needs_level": "You need at least 1 level",
-	"hamlet.refusal.not_slept": "Hasn't slept",
-	"hamlet.refusal.not_socialized": "Hasn't socialized",
-	"hamlet.refusal.cramped": "Too cramped to work",
+	"hamlet.not_working.title": "(Not working: %s)",
+	"hamlet.not_working.no_bed": "no bed",
+	"hamlet.not_working.no_workstation": "no workstation",
 	"hamlet.command.ore_count": "Diamond ore: %s, emerald ore: %s",
-	"hamlet.command.readiness": "Grace: %s, slept: %s, socialized: %s, space: %s",
-	"hamlet.command.grace_ended": "Grace period ended",
 	"hamlet.command.not_a_villager": "That entity isn't a villager",
 	"hamlet.command.stock_added": "Added %s item(s) to stock"
 }

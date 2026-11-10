@@ -9,10 +9,12 @@ import maihatsuu.hamlet.Hamlet;
 import maihatsuu.hamlet.data.ProfessionData;
 import maihatsuu.hamlet.data.ProfessionDataLoader;
 import maihatsuu.hamlet.villager.HamletVillager;
+import maihatsuu.hamlet.villager.WorkRequirements;
 
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -114,7 +116,13 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 
 			@Override
 			public Component getDisplayName() {
-				return villager.getDisplayName();
+				Component name = villager.getDisplayName();
+				return WorkRequirements.missing(villager)
+					.<Component>map(reason -> Component.empty()
+						.append(name)
+						.append(" ")
+						.append(Component.translatable("hamlet.not_working.title", reason).withStyle(ChatFormatting.RED)))
+					.orElse(name);
 			}
 
 			@Override
