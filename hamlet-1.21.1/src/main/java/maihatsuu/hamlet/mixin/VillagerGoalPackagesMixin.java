@@ -8,6 +8,7 @@ import com.mojang.datafixers.util.Pair;
 
 import maihatsuu.hamlet.work.FarmCrops;
 import maihatsuu.hamlet.work.GoFishing;
+import maihatsuu.hamlet.work.TendAnimals;
 import maihatsuu.hamlet.work.ProfessionWork;
 
 import net.minecraft.world.entity.EntityType;
@@ -62,6 +63,9 @@ abstract class VillagerGoalPackagesMixin {
 		}
 		if (profession == VillagerProfession.FISHERMAN) {
 			return hamlet$workPackage(new GoFishing(speed));
+		}
+		if (profession == VillagerProfession.SHEPHERD) {
+			return hamlet$workPackage(new TendAnimals(speed));
 		}
 		return work;
 	}

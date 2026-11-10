@@ -3,11 +3,9 @@ package maihatsuu.hamlet.work;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.WeakHashMap;
 
 import org.jetbrains.annotations.Nullable;
 
-import maihatsuu.hamlet.mixin.SheepAccessor;
 import maihatsuu.hamlet.villager.HamletProfessions;
 
 import net.minecraft.core.BlockPos;
@@ -25,10 +23,6 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiRecord;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Chicken;
-import net.minecraft.world.entity.animal.Cow;
-import net.minecraft.world.entity.animal.Sheep;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -48,18 +42,15 @@ import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 
 
 
-import net.minecraft.world.phys.AABB;
 
 /** What each working profession does when it uses its workstation. */
 final class Jobs {
-	private static final int ANIMAL_RADIUS = 8;
-	private static final long ANIMAL_COOLDOWN_TICKS = 6000L;
 	private static final int HIVE_RADIUS = 16;
 	private static final int HONEYCOMB_PER_HIVE = 3;
 
-	// Farmers and fishermen aren't here: they have their own behaviours (FarmCrops and GoFishing).
+	// Farmers, fishermen and shepherds aren't here: they have their own behaviours (FarmCrops, GoFishing
+	// and TendAnimals).
 	private static final Map<VillagerProfession, Job> JOBS = Map.of(
-		VillagerProfession.SHEPHERD, Jobs::tendAnimals,
 		VillagerProfession.LIBRARIAN, Jobs::copyBook,
 		VillagerProfession.CARTOGRAPHER, Jobs::makeMap,
 		HamletProfessions.BEEKEEPER, Jobs::gatherHoney
@@ -71,50 +62,12 @@ final class Jobs {
 		new ExplorerMap(StructureTags.ON_TRIAL_CHAMBERS_MAPS, "filled_map.trial_chambers", MapDecorationTypes.TRIAL_CHAMBERS)
 	);
 
-	/** When each cow or chicken last produced. Not saved, so a restart just makes them ready sooner. */
-	private static final Map<Animal, Long> LAST_PRODUCED = new WeakHashMap<>();
-
 	private Jobs() {
 	}
 
 	@Nullable
 	static Job forProfession(VillagerProfession profession) {
 		return JOBS.get(profession);
-	}
-
-	private static boolean tendAnimals(ServerLevel level, BlockPos site, SimpleContainer stock) {
-		long now = level.getGameTime();
-		List<Animal> ready = level.getEntitiesOfClass(
-			Animal.class,
-			new AABB(site).inflate(ANIMAL_RADIUS),
-			animal -> isReady(animal, now)
-		);
-		if (ready.isEmpty()) {
-			return false;
-		}
-
-		Animal animal = ready.get(level.random.nextInt(ready.size()));
-		if (animal instanceof Sheep sheep) {
-			sheep.setSheared(true);
-			sheep.playSound(SoundEvents.SHEEP_SHEAR, 1.0F, 1.0F);
-			int count = 1 + level.random.nextInt(3);
-			stock.addItem(new ItemStack(SheepAccessor.hamlet$getItemByDye().get(sheep.getColor()), count));
-		} else {
-			stock.addItem(new ItemStack(animal instanceof Cow ? Items.MILK_BUCKET : Items.EGG));
-			LAST_PRODUCED.put(animal, now);
-		}
-		return true;
-	}
-
-	private static boolean isReady(Animal animal, long now) {
-		if (animal instanceof Sheep sheep) {
-			return sheep.readyForShearing();
-		}
-		if (!(animal instanceof Cow || animal instanceof Chicken) || animal.isBaby()) {
-			return false;
-		}
-		Long lastProduced = LAST_PRODUCED.get(animal);
-		return lastProduced == null || now - lastProduced >= ANIMAL_COOLDOWN_TICKS;
 	}
 
 	private static boolean gatherHoney(ServerLevel level, BlockPos site, SimpleContainer stock) {

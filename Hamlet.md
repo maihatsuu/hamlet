@@ -33,7 +33,7 @@ Only these professions exist; all others are deprecated.
 | Profession | Workstation | Work | Sells / services |
 |---|---|---|---|
 | Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away. | Stock: harvest output. No longer makes bread or shares food. |
-| Shepherd | Loom | Shears sheep, milks cows, gathers eggs. | Stock: wool, milk, eggs. |
+| Shepherd | Loom | Spends its work period wandering within 12 blocks of its loom. When a sheep is ready to shear, or a cow or chicken is ready to give milk or an egg (each every 5 minutes), it walks up to it holding shears or a bucket and stores the wool, milk or egg. | Stock: wool, milk, eggs. |
 | Beekeeper | Beehive | Gathers from nearby hives. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores a catch rolled from vanilla's `gameplay/fishing` loot table, the one players use, so mod and datapack changes to fishing loot apply. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
 | Librarian | Lectern | Copies the book on its lectern. | Sells copies of written books and Archive tomes. Designed together with Archive. |
@@ -95,6 +95,7 @@ including ones for the new professions (so beehives and decorated pots actually 
   crafting recipe is gone.
 - Fisherman walks to the shore, holds a rod, casts a bobber, and each bite adds a catch to its stock.
 - Fisherman only catches treasure near open water.
+- Shepherd walks up to woolly sheep with shears and shears them into its stock; also milks cows and gathers eggs.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Breeding works with player food and doesn't happen without it.
 - New villages contain the new houses and no retired ones.
