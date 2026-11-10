@@ -1,7 +1,8 @@
 package maihatsuu.hamlet.work;
 
+import maihatsuu.hamlet.entity.FishingBobber;
+
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.SimpleContainer;
@@ -15,24 +16,27 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.minecraft.world.phys.Vec3;
 
-/** A fisherman's catches. Vanilla's treasure check needs a player's hook, so it's ported here. */
+/**
+ * A fisherman's catches, rolled from the same {@code gameplay/fishing} loot table a player's hook uses, so
+ * datapacks and mods that change fishing loot apply to villagers too.
+ */
 final class Fishing {
-	// The same weights as vanilla's gameplay/fishing table.
-	private static final int JUNK_WEIGHT = 10;
-	private static final int TREASURE_WEIGHT = 5;
-	private static final int FISH_WEIGHT = 85;
-
 	private Fishing() {
 	}
 
-	/** Rolls one catch for a bobber floating at {@code water} and stores it. */
-	static void catchInto(ServerLevel level, BlockPos water, SimpleContainer stock) {
-		LootTable table = level.getServer().reloadableRegistries().getLootTable(rollCatch(level, isOpenWater(level, water)));
+	/**
+	 * Rolls one catch for {@code bobber} and stores it. Open water is judged at {@code water}, the block it
+	 * was cast to; FishingHookPredicateMixin lets the table's open-water conditions see that.
+	 */
+	static void catchInto(ServerLevel level, FishingBobber bobber, BlockPos water, SimpleContainer stock) {
+		bobber.setOpenWaterFishing(isOpenWater(level, water));
+		LootTable table = level.getServer().reloadableRegistries().getLootTable(BuiltInLootTables.FISHING);
+		// The same parameters as FishingHook.retrieve, minus the player's luck.
 		LootParams params = new LootParams.Builder(level)
-			.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(water))
+			.withParameter(LootContextParams.ORIGIN, bobber.position())
 			.withParameter(LootContextParams.TOOL, new ItemStack(Items.FISHING_ROD))
+			.withParameter(LootContextParams.THIS_ENTITY, bobber)
 			.create(LootContextParamSets.FISHING);
 		table.getRandomItems(params).forEach(stock::addItem);
 	}
@@ -40,15 +44,6 @@ final class Fishing {
 	/** A water source with air above, where a bobber can float. */
 	static boolean isSurface(ServerLevel level, BlockPos pos) {
 		return level.isLoaded(pos) && isWaterSource(level.getFluidState(pos)) && level.getBlockState(pos.above()).isAir();
-	}
-
-	private static ResourceKey<LootTable> rollCatch(ServerLevel level, boolean openWater) {
-		int treasureWeight = openWater ? TREASURE_WEIGHT : 0;
-		int roll = level.random.nextInt(JUNK_WEIGHT + treasureWeight + FISH_WEIGHT);
-		if (roll < JUNK_WEIGHT) {
-			return BuiltInLootTables.FISHING_JUNK;
-		}
-		return roll < JUNK_WEIGHT + treasureWeight ? BuiltInLootTables.FISHING_TREASURE : BuiltInLootTables.FISHING_FISH;
 	}
 
 	// Ported from FishingHook.calculateOpenWater, which needs a hook entity.

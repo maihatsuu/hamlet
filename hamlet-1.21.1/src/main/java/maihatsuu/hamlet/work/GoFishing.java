@@ -24,6 +24,7 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.BlockPosTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.Villager;
@@ -117,7 +118,8 @@ public final class GoFishing extends Behavior<Villager> {
 
 	@Override
 	protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
-		return this.spot != null && canWork(level, villager);
+		// The brain keeps ticking a running behaviour after its activity ends, so stop with the work period.
+		return this.spot != null && villager.getBrain().isActive(Activity.WORK) && canWork(level, villager);
 	}
 
 	private static boolean canWork(ServerLevel level, Villager villager) {
@@ -197,8 +199,8 @@ public final class GoFishing extends Behavior<Villager> {
 						this.reelTime = time + MIN_REACTION + level.random.nextInt(MAX_REACTION - MIN_REACTION + 1);
 					} else if (time >= this.reelTime) {
 						SimpleContainer stock = ((HamletVillager) villager).hamlet$getStock();
-						// The aimed-at block, so a bobber that drifted on landing keeps the open-water check.
-						Fishing.catchInto(level, spot.target(), stock);
+						// Open water is judged at the aimed-at block, so a bobber that drifted on landing keeps it.
+						Fishing.catchInto(level, bobber, spot.target(), stock);
 						this.reelIn();
 						this.setPhase(Phase.PAUSED, time, MIN_PAUSE + level.random.nextInt(MAX_PAUSE - MIN_PAUSE + 1));
 					}

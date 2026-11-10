@@ -46,6 +46,7 @@ public class FishingBobber extends Entity {
 
 	private final RandomSource synchronizedRandom = RandomSource.create();
 	private boolean biting;
+	private boolean openWater;
 	private int outOfWaterTime;
 	private int nibble;
 	private int timeUntilLured;
@@ -98,6 +99,18 @@ public class FishingBobber extends Entity {
 	}
 
 	/** A fish is on the line: the fisherman should reel in now. */
+	/**
+	 * Server side: whether this bobber counts as fishing in open water, for loot tables that check it
+	 * (see FishingHookPredicateMixin). Set by the fisherman just before it rolls a catch.
+	 */
+	public boolean isOpenWaterFishing() {
+		return this.openWater;
+	}
+
+	public void setOpenWaterFishing(boolean openWater) {
+		this.openWater = openWater;
+	}
+
 	public boolean isNibbling() {
 		return this.nibble > 0;
 	}

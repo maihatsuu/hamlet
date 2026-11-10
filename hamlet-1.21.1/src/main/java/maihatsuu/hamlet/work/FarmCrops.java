@@ -18,6 +18,7 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.BlockPosTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.Villager;
@@ -72,7 +73,8 @@ public final class FarmCrops extends Behavior<Villager> {
 
 	@Override
 	protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
-		return canWork(level, villager);
+		// The brain keeps ticking a running behaviour after its activity ends, so stop with the work period.
+		return villager.getBrain().isActive(Activity.WORK) && canWork(level, villager);
 	}
 
 	private static boolean canWork(ServerLevel level, Villager villager) {
