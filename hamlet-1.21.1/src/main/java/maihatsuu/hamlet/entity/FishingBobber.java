@@ -1,5 +1,8 @@
 package maihatsuu.hamlet.entity;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -37,6 +40,9 @@ public class FishingBobber extends Entity {
 	private static final double DRAG = 0.92;
 	private static final double LAUNCH_UP = 0.3;
 	private static final int MAX_OUT_OF_WATER_TIME = 10;
+
+	/** Client side only: each villager's bobber, so its rod can show the cast texture. */
+	private static final Map<Integer, FishingBobber> CLIENT_BOBBERS = new HashMap<>();
 
 	private final RandomSource synchronizedRandom = RandomSource.create();
 	private boolean biting;
@@ -111,6 +117,17 @@ public class FishingBobber extends Entity {
 		this.discard();
 	}
 
+	/** Client side only: whether this entity has a bobber out. */
+	public static boolean hasBobberOut(Entity owner) {
+		FishingBobber bobber = CLIENT_BOBBERS.get(owner.getId());
+		return bobber != null && !bobber.isRemoved();
+	}
+
+	@Override
+	public void onClientRemoval() {
+		CLIENT_BOBBERS.remove(this.entityData.get(OWNER_ID), this);
+	}
+
 	@Nullable
 	public Villager getOwner() {
 		return this.level().getEntity(this.entityData.get(OWNER_ID)) instanceof Villager villager ? villager : null;
@@ -143,7 +160,9 @@ public class FishingBobber extends Entity {
 	public void tick() {
 		this.synchronizedRandom.setSeed(this.getUUID().getLeastSignificantBits() ^ this.level().getGameTime());
 		super.tick();
-		if (!this.level().isClientSide && !this.ownerIsFishing()) {
+		if (this.level().isClientSide) {
+			CLIENT_BOBBERS.put(this.entityData.get(OWNER_ID), this);
+		} else if (!this.ownerIsFishing()) {
 			this.discard();
 			return;
 		}

@@ -3,6 +3,7 @@
 	"package": "maihatsuu.hamlet.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
+		"CrossedArmsItemLayerMixin",
 		"VillagerProfessionLayerMixin"
 	],
 	"injectors": {

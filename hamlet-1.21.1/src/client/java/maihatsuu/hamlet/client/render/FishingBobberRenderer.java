@@ -20,9 +20,11 @@ public class FishingBobberRenderer extends EntityRenderer<FishingBobber> {
 	private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/fishing_hook.png");
 	private static final RenderType RENDER_TYPE = RenderType.entityCutout(TEXTURE);
 	private static final int LINE_SEGMENTS = 16;
-	// Where the rod tip sits relative to the villager's eyes; villagers hold items in their crossed arms.
-	private static final double ROD_FORWARD = 0.7;
-	private static final double ROD_BELOW_EYES = 0.3;
+	// Where the rod tip sits relative to the villager's feet, matching CrossedArmsItemLayerMixin's pose:
+	// held out from its crossed hands and angled up over the water.
+	private static final double ROD_FORWARD = 0.85;
+	private static final double ROD_RIGHT = 0.0;
+	private static final double ROD_HEIGHT = 1.5;
 
 	public FishingBobberRenderer(EntityRendererProvider.Context context) {
 		super(context);
@@ -65,10 +67,12 @@ public class FishingBobberRenderer extends EntityRenderer<FishingBobber> {
 	private static Vec3 rodTip(Villager villager, float partialTick) {
 		float bodyYaw = Mth.lerp(partialTick, villager.yBodyRotO, villager.yBodyRot) * Mth.DEG_TO_RAD;
 		double scale = villager.getScale();
-		return villager.getEyePosition(partialTick).add(
-			-Mth.sin(bodyYaw) * ROD_FORWARD * scale,
-			-ROD_BELOW_EYES * scale,
-			Mth.cos(bodyYaw) * ROD_FORWARD * scale
+		double sin = Mth.sin(bodyYaw);
+		double cos = Mth.cos(bodyYaw);
+		return villager.getPosition(partialTick).add(
+			(-sin * ROD_FORWARD - cos * ROD_RIGHT) * scale,
+			ROD_HEIGHT * scale,
+			(cos * ROD_FORWARD - sin * ROD_RIGHT) * scale
 		);
 	}
 

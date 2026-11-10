@@ -46,7 +46,10 @@ public final class GoFishing extends Behavior<Villager> {
 	private static final int MAX_CAST = 5;
 	private static final long SEARCH_COOLDOWN = 100L;
 	private static final long GIVE_UP_WALKING = 200L;
-	private static final double AT_SHORE_SQR = 1.0;
+	/** Casting needs the fisherman properly on its spot, not just near it at the water's edge. */
+	private static final double ON_SPOT_SQR = 0.7 * 0.7;
+	private static final int MIN_RECOVERY = 20;
+	private static final int MAX_RECOVERY = 40;
 	/** Nudged this far off the spot with the line out, the fisherman walks back without reeling in. */
 	private static final double NUDGED_SQR = 1.5 * 1.5;
 	/** This far off the spot, the line is reeled in. */
@@ -72,7 +75,7 @@ public final class GoFishing extends Behavior<Villager> {
 	private static final double SURFACE_HEIGHT = 0.9;
 	private static final double ROD_REACH = 0.3;
 
-	private enum Phase { WALKING, WAITING, PAUSED, STROLLING }
+	private enum Phase { WALKING, WAITING, PAUSED, STROLLING, RECOVERING }
 
 	private final float speed;
 	private Phase phase = Phase.WALKING;
@@ -84,6 +87,8 @@ public final class GoFishing extends Behavior<Villager> {
 	private long phaseEnd;
 	/** When the fisherman will react to the current bite, or 0 if nothing has bitten yet. */
 	private long reelTime;
+	/** After climbing out of water, when the fisherman will pick a new spot, or 0 while still in it. */
+	private long dryTime;
 	private long nextSearchTime;
 
 	public GoFishing(float speed) {
@@ -140,9 +145,33 @@ public final class GoFishing extends Behavior<Villager> {
 			return;
 		}
 
+		// Fell in: reel in and get out before doing anything else.
+		if (villager.isInWater() && this.phase != Phase.RECOVERING) {
+			this.reelIn();
+			villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(spot.shore(), this.speed, 0));
+			this.dryTime = 0;
+			this.setPhase(Phase.RECOVERING, time, 0);
+			return;
+		}
+
 		switch (this.phase) {
+			case RECOVERING -> {
+				if (villager.isInWater()) {
+					this.dryTime = 0;
+					if (!villager.getBrain().hasMemoryValue(MemoryModuleType.WALK_TARGET)) {
+						villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(spot.shore(), this.speed, 0));
+					}
+				} else if (this.dryTime == 0) {
+					// Out: stand still and shake it off for a moment, then pick a spot afresh.
+					this.dryTime = time + MIN_RECOVERY + level.random.nextInt(MAX_RECOVERY - MIN_RECOVERY + 1);
+					villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+					villager.getNavigation().stop();
+				} else if (time >= this.dryTime) {
+					this.moveSpot(level, villager, time);
+				}
+			}
 			case WALKING -> {
-				if (isAt(villager, spot.shore(), AT_SHORE_SQR) && !villager.isInWater()) {
+				if (isAt(villager, spot.shore(), ON_SPOT_SQR) && villager.onGround()) {
 					this.cast(level, villager, time);
 				} else if (time - this.phaseStart > GIVE_UP_WALKING) {
 					this.moveSpot(level, villager, time);
@@ -150,8 +179,8 @@ public final class GoFishing extends Behavior<Villager> {
 			}
 			case WAITING -> {
 				FishingBobber bobber = this.bobber;
-				// Knocked into the water, carried far off, or the bobber vanished: reel in and go back.
-				if (villager.isInWater() || !isAt(villager, spot.shore(), TOO_FAR_SQR) || bobber == null || bobber.isRemoved()) {
+				// Carried far off, or the bobber vanished: reel in and go back.
+				if (!isAt(villager, spot.shore(), TOO_FAR_SQR) || bobber == null || bobber.isRemoved()) {
 					this.reelIn();
 					this.walkToSpot(villager, time);
 					return;
@@ -206,7 +235,7 @@ public final class GoFishing extends Behavior<Villager> {
 	private void returnToFishing(ServerLevel level, Villager villager, long time, Spot spot) {
 		if (level.random.nextInt(MOVE_SPOT_CHANCE) == 0 || !Fishing.isSurface(level, spot.target())) {
 			this.moveSpot(level, villager, time);
-		} else if (isAt(villager, spot.shore(), AT_SHORE_SQR)) {
+		} else if (isAt(villager, spot.shore(), ON_SPOT_SQR) && villager.onGround()) {
 			this.cast(level, villager, time);
 		} else {
 			this.walkToSpot(villager, time);
