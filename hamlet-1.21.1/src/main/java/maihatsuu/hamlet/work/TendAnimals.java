@@ -5,12 +5,17 @@ import java.util.Optional;
 import java.util.WeakHashMap;
 
 import com.google.common.collect.ImmutableMap;
+import com.mojang.serialization.Codec;
 
 import org.jetbrains.annotations.Nullable;
 
+import maihatsuu.hamlet.Hamlet;
 import maihatsuu.hamlet.mixin.SheepAccessor;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
+
+import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -27,7 +32,10 @@ import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Chicken;
 import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.animal.MushroomCow;
 import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.entity.animal.armadillo.Armadillo;
+import net.minecraft.world.entity.animal.goat.Goat;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.schedule.Activity;
@@ -37,8 +45,9 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 
 /**
- * A shepherd's whole work period: wander the pasture around its loom, and whenever a sheep is ready to
- * shear, or a cow or chicken is ready to give milk or an egg, walk up to it and take that into stock.
+ * A shepherd's whole work period: wander the pasture around its loom, and whenever an animal is ready, walk
+ * up to it and take what it gives into stock: wool from sheep, milk from cows and goats, mushroom stew from
+ * mooshrooms, scutes from armadillos and eggs from chickens.
  */
 public final class TendAnimals extends Behavior<Villager> {
 	private static final int PASTURE_RADIUS = 12;
@@ -51,12 +60,12 @@ public final class TendAnimals extends Behavior<Villager> {
 	private static final int WANDER_TRIES = 10;
 	private static final long GIVE_UP_TICKS = 200L;
 	private static final long SKIP_UNREACHABLE_TICKS = 600L;
-	/** How long a cow or chicken takes to be ready again, as before. Sheep instead regrow wool by grazing. */
+	/** How long a cow, goat, chicken or armadillo takes to be ready again. Sheep regrow wool by grazing. */
 	private static final long PRODUCE_COOLDOWN_TICKS = 6000L;
 	private static final int RUN_TICKS = 1200;
 
-	/** When each cow or chicken last produced. Not saved, so a restart just makes them ready sooner. */
-	private static final Map<Animal, Long> LAST_PRODUCED = new WeakHashMap<>();
+	/** The game time an animal on a cooldown timer last gave something, saved with the animal. */
+	private static final AttachmentType<Long> LAST_PRODUCED = AttachmentRegistry.createPersistent(Hamlet.id("last_produced"), Codec.LONG);
 
 	private final float speed;
 	@Nullable
@@ -65,6 +74,10 @@ public final class TendAnimals extends Behavior<Villager> {
 	private long nextActionTime;
 	/** Animals the shepherd couldn't reach, so it doesn't keep chasing them. */
 	private final Map<Animal, Long> skipUntil = new WeakHashMap<>();
+
+	/** Registers the saved cooldown; called from mod init, before any world loads. */
+	public static void init() {
+	}
 
 	public TendAnimals(float speed) {
 		super(
@@ -183,11 +196,20 @@ public final class TendAnimals extends Behavior<Villager> {
 		if (animal instanceof Sheep sheep) {
 			return sheep.readyForShearing();
 		}
-		if (!(animal instanceof Cow || animal instanceof Chicken) || animal.isBaby()) {
+		if (!onCooldownTimer(animal) || animal.isBaby()) {
 			return false;
 		}
-		Long lastProduced = LAST_PRODUCED.get(animal);
+		// A rolled-up armadillo can't be brushed.
+		if (animal instanceof Armadillo armadillo && armadillo.isScared()) {
+			return false;
+		}
+		Long lastProduced = animal.getAttached(LAST_PRODUCED);
 		return lastProduced == null || now - lastProduced >= PRODUCE_COOLDOWN_TICKS;
+	}
+
+	/** Animals that give something on a timer rather than, like sheep, regrowing it themselves. */
+	private static boolean onCooldownTimer(Animal animal) {
+		return animal instanceof Cow || animal instanceof Goat || animal instanceof Chicken || animal instanceof Armadillo;
 	}
 
 	private static void tend(ServerLevel level, Villager villager, Animal animal, long now) {
@@ -199,21 +221,36 @@ public final class TendAnimals extends Behavior<Villager> {
 			sheep.gameEvent(GameEvent.SHEAR, villager);
 			int count = 1 + level.random.nextInt(3);
 			stock.addItem(new ItemStack(SheepAccessor.hamlet$getItemByDye().get(sheep.getColor()), count));
+			return;
+		}
+		// MushroomCow extends Cow, so it has to be checked first.
+		if (animal instanceof MushroomCow) {
+			animal.playSound(SoundEvents.MOOSHROOM_MILK, 1.0F, 1.0F);
+			stock.addItem(new ItemStack(Items.MUSHROOM_STEW));
 		} else if (animal instanceof Cow) {
 			animal.playSound(SoundEvents.COW_MILK, 1.0F, 1.0F);
 			stock.addItem(new ItemStack(Items.MILK_BUCKET));
-			LAST_PRODUCED.put(animal, now);
+		} else if (animal instanceof Goat goat) {
+			goat.playSound(goat.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_MILK : SoundEvents.GOAT_MILK, 1.0F, 1.0F);
+			stock.addItem(new ItemStack(Items.MILK_BUCKET));
+		} else if (animal instanceof Armadillo) {
+			// Vanilla's Armadillo.brushOffScute drops the scute on the ground; this stores it instead.
+			animal.playSound(SoundEvents.ARMADILLO_BRUSH, 1.0F, 1.0F);
+			animal.gameEvent(GameEvent.ENTITY_INTERACT, villager);
+			stock.addItem(new ItemStack(Items.ARMADILLO_SCUTE));
 		} else {
 			animal.playSound(SoundEvents.CHICKEN_EGG, 1.0F, (level.random.nextFloat() - level.random.nextFloat()) * 0.2F + 1.0F);
 			stock.addItem(new ItemStack(Items.EGG));
-			LAST_PRODUCED.put(animal, now);
 		}
+		animal.setAttached(LAST_PRODUCED, now);
 	}
 
-	/** Shears for a sheep and a bucket for a cow, held while walking over. Chickens need nothing. */
+	/** The tool the shepherd holds while walking over. Chickens need nothing. */
 	private static void holdToolFor(Villager villager, Animal animal) {
 		ItemStack tool = animal instanceof Sheep ? new ItemStack(Items.SHEARS)
-			: animal instanceof Cow ? new ItemStack(Items.BUCKET)
+			: animal instanceof MushroomCow ? new ItemStack(Items.BOWL)
+			: animal instanceof Cow || animal instanceof Goat ? new ItemStack(Items.BUCKET)
+			: animal instanceof Armadillo ? new ItemStack(Items.BRUSH)
 			: ItemStack.EMPTY;
 		villager.setItemSlot(EquipmentSlot.MAINHAND, tool);
 		villager.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
@@ -221,7 +258,7 @@ public final class TendAnimals extends Behavior<Villager> {
 
 	private static void putToolAway(Villager villager) {
 		ItemStack held = villager.getMainHandItem();
-		if (held.is(Items.SHEARS) || held.is(Items.BUCKET)) {
+		if (held.is(Items.SHEARS) || held.is(Items.BUCKET) || held.is(Items.BOWL) || held.is(Items.BRUSH)) {
 			villager.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
 		}
 	}
