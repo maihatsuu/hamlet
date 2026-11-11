@@ -6,10 +6,12 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.datafixers.util.Pair;
 
+import maihatsuu.hamlet.villager.HamletProfessions;
 import maihatsuu.hamlet.work.FarmCrops;
 import maihatsuu.hamlet.work.GoFishing;
-import maihatsuu.hamlet.work.TendAnimals;
 import maihatsuu.hamlet.work.ProfessionWork;
+import maihatsuu.hamlet.work.TendAnimals;
+import maihatsuu.hamlet.work.TendHives;
 
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
@@ -66,6 +68,9 @@ abstract class VillagerGoalPackagesMixin {
 		}
 		if (profession == VillagerProfession.SHEPHERD) {
 			return hamlet$workPackage(new TendAnimals(speed));
+		}
+		if (profession == HamletProfessions.BEEKEEPER) {
+			return hamlet$workPackage(new TendHives(speed));
 		}
 		return work;
 	}

@@ -8,7 +8,6 @@ import net.minecraft.world.entity.npc.VillagerProfession;
 public final class VillagerRules {
 	private static final Set<VillagerProfession> RETIRED = Set.of(
 		VillagerProfession.ARMORER,
-		VillagerProfession.BUTCHER,
 		VillagerProfession.FLETCHER,
 		VillagerProfession.LEATHERWORKER,
 		VillagerProfession.MASON,
@@ -19,9 +18,16 @@ public final class VillagerRules {
 	private VillagerRules() {
 	}
 
-	/** Villagers have no levels, and retired professions become unemployed. */
+	/**
+	 * Villagers have no levels, and retired professions become unemployed, except the butcher: its smoker is
+	 * the beekeeper's workstation, so vanilla's assignment (and old saves) hand butchers over to beekeeping.
+	 */
 	public static VillagerData normalize(VillagerData data) {
 		VillagerData result = data.setLevel(VillagerData.MIN_VILLAGER_LEVEL);
-		return RETIRED.contains(result.getProfession()) ? result.setProfession(VillagerProfession.NONE) : result;
+		VillagerProfession profession = result.getProfession();
+		if (profession == VillagerProfession.BUTCHER) {
+			return result.setProfession(HamletProfessions.BEEKEEPER);
+		}
+		return RETIRED.contains(profession) ? result.setProfession(VillagerProfession.NONE) : result;
 	}
 }

@@ -6,54 +6,32 @@ import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
 
-import maihatsuu.hamlet.villager.HamletProfessions;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-
 import net.minecraft.tags.StructureTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.ai.village.poi.PoiManager;
-import net.minecraft.world.entity.ai.village.poi.PoiRecord;
-import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.MapItem;
 import net.minecraft.world.item.component.WrittenBookContent;
-import net.minecraft.world.level.block.BeehiveBlock;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.Structure;
-
 import net.minecraft.world.level.saveddata.maps.MapDecorationType;
 import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 
-
-
-
-
-
 /** What each working profession does when it uses its workstation. */
 final class Jobs {
-	private static final int HIVE_RADIUS = 16;
-	private static final int HONEYCOMB_PER_HIVE = 3;
-
-	// Farmers, fishermen and shepherds aren't here: they have their own behaviours (FarmCrops, GoFishing
-	// and TendAnimals).
+	// Farmers, fishermen, shepherds and beekeepers aren't here: they have their own behaviours (FarmCrops,
+	// GoFishing, TendAnimals and TendHives).
 	private static final Map<VillagerProfession, Job> JOBS = Map.of(
 		VillagerProfession.LIBRARIAN, Jobs::copyBook,
-		VillagerProfession.CARTOGRAPHER, Jobs::makeMap,
-		HamletProfessions.BEEKEEPER, Jobs::gatherHoney
+		VillagerProfession.CARTOGRAPHER, Jobs::makeMap
 	);
 
 	private static final List<ExplorerMap> EXPLORER_MAPS = List.of(
@@ -68,27 +46,6 @@ final class Jobs {
 	@Nullable
 	static Job forProfession(VillagerProfession profession) {
 		return JOBS.get(profession);
-	}
-
-	private static boolean gatherHoney(ServerLevel level, BlockPos site, SimpleContainer stock) {
-		return level.getPoiManager()
-			.getInRange(holder -> holder.is(PoiTypes.BEEHIVE), site, HIVE_RADIUS, PoiManager.Occupancy.ANY)
-			.map(PoiRecord::getPos)
-			.filter(pos -> level.isLoaded(pos) && isFullHive(level.getBlockState(pos)))
-			.findFirst()
-			.map(pos -> {
-				BlockState state = level.getBlockState(pos);
-				((BeehiveBlock) state.getBlock()).resetHoneyLevel(level, state, pos);
-				level.playSound(null, pos, SoundEvents.BEEHIVE_SHEAR, SoundSource.BLOCKS, 1.0F, 1.0F);
-				stock.addItem(new ItemStack(Items.HONEY_BOTTLE));
-				stock.addItem(new ItemStack(Items.HONEYCOMB, HONEYCOMB_PER_HIVE));
-				return true;
-			})
-			.orElse(false);
-	}
-
-	private static boolean isFullHive(BlockState state) {
-		return state.getBlock() instanceof BeehiveBlock && state.getValue(BeehiveBlock.HONEY_LEVEL) >= BeehiveBlock.MAX_HONEY_LEVELS;
 	}
 
 	/** Keeps one of each explorer map in stock, so buying one is what prompts the next. */

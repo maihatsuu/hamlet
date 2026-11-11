@@ -27,8 +27,9 @@ public final class HamletProfessions {
 	static {
 		PointOfInterestHelper.register(ARCHAEOLOGIST_POI.location(), 1, 1, Blocks.DECORATED_POT);
 
-		// A block state can only belong to one POI type, so the beekeeper has to share vanilla's beehive POI.
-		BEEKEEPER = register("beekeeper", PoiTypes.BEEHIVE, SoundEvents.BEEHIVE_WORK);
+		// A block state can only belong to one POI type, so the beekeeper shares the retired butcher's smoker
+		// POI. Vanilla assigns a smoker to the butcher first; VillagerRules turns butchers into beekeepers.
+		BEEKEEPER = register("beekeeper", PoiTypes.BUTCHER, SoundEvents.BEEHIVE_WORK);
 		ARCHAEOLOGIST = register("archaeologist", ARCHAEOLOGIST_POI, SoundEvents.BRUSH_GENERIC);
 	}
 
