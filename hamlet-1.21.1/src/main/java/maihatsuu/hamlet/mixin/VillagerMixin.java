@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerData;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
@@ -109,6 +110,19 @@ abstract class VillagerMixin implements HamletVillager {
 	)
 	private boolean hamlet$alwaysOpen(boolean noOffers) {
 		return false;
+	}
+
+	// Storage holds what players and pickups gave the villager, so it drops on death, as equipment does,
+	// even with doMobLoot off. Stock is work output and is lost. This includes turning into a zombie.
+	@Inject(method = "die", at = @At("TAIL"))
+	private void hamlet$dropStorage(DamageSource source, CallbackInfo ci) {
+		Villager self = (Villager) (Object) this;
+		if (self.level().isClientSide()) {
+			return;
+		}
+		for (ItemStack stack : this.hamlet$storage.removeAllItems()) {
+			self.spawnAtLocation(stack);
+		}
 	}
 
 	// Vanilla villagers never heal on their own, so the odd fall or bump from pathfinding adds up.

@@ -12,7 +12,8 @@ Needs to be installed on both server and client (custom trading screen).
   - **Stock** (27 slots): all work output. Players never reach it directly; it's only sold, through
     the trading screen. A full stock stops the villager working.
   - **Storage** (9 slots): anything players put in, and anything the villager picks up off the ground.
-    Players can take it back freely. It's never for sale and doesn't affect work.
+    Players can take it back freely. It's never for sale and doesn't affect work. It drops when the
+    villager dies (including turning into a zombie); stock doesn't.
 - **Trading screen:** laid out like vanilla's. On the left, a scrolling list of offers: the
   profession's services first, then one row for each kind of item in stock. Clicking a row selects it
   and moves its cost into the two payment slots; the result slot shows what you'll get, and taking it
@@ -99,6 +100,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 
 ## Testing
 
+- Kill a villager with items in storage: they drop on the ground; its stock doesn't.
 - Add an item to `#hamlet:villager_discards` with a datapack: villagers that produce it stop storing it.
 - Hurt a villager: it heals half a heart every 5 seconds until it's at full health.
 - Right-click any adult villager, including jobless villagers and nitwits: the trading screen opens. Babies refuse.
