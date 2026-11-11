@@ -1,6 +1,7 @@
 package maihatsuu.hamlet.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
@@ -12,6 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerData;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -65,22 +67,47 @@ abstract class VillagerMixin implements HamletVillager {
 		return VillagerRules.normalize(data);
 	}
 
-	// Vanilla refuses to trade when the villager has no offers. Hamlet never gives it any, so this check
-	// becomes "has nothing to trade" and vanilla's head shake and early return still apply.
+	// Vanilla refuses to trade when the villager has no offers, and Hamlet never gives it any. Every adult
+	// opens the screen instead, jobless or not, to show its inventory; babies still refuse, earlier on.
 	@ModifyExpressionValue(
 		method = "mobInteract",
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/trading/MerchantOffers;isEmpty()Z")
 	)
-	private boolean hamlet$refuseTrade(boolean noOffers) {
-		VillagerProfession profession = ((Villager) (Object) this).getVillagerData().getProfession();
-		return profession == VillagerProfession.NONE || profession == VillagerProfession.NITWIT;
+	private boolean hamlet$alwaysOpen(boolean noOffers) {
+		return false;
 	}
 
-	// Covers both pickup paths: Mob.aiStep checks this before picking items up, and the item sensor
-	// behind GoToWantedItem filters by it.
+	// Vanilla stops jobless villagers trading every tick, which would close their screen at once.
+	@WrapWithCondition(
+		method = "customServerAiStep",
+		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/npc/Villager;stopTrading()V")
+	)
+	private boolean hamlet$keepJoblessTrading(Villager self) {
+		return false;
+	}
+
+	// Villagers pick up anything that fits in Hamlet's inventory. This covers both pickup paths: Mob.aiStep
+	// checks it before picking up, and the item sensor behind GoToWantedItem filters by it.
 	@Inject(method = "wantsToPickUp", at = @At("HEAD"), cancellable = true)
-	private void hamlet$noItemPickup(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-		cir.setReturnValue(false);
+	private void hamlet$wantsAnything(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+		cir.setReturnValue(this.hamlet$stock.canAddItem(stack));
+	}
+
+	@Inject(method = "pickUpItem", at = @At("HEAD"), cancellable = true)
+	private void hamlet$pickUpIntoStock(ItemEntity itemEntity, CallbackInfo ci) {
+		ci.cancel();
+		Villager self = (Villager) (Object) this;
+		ItemStack stack = itemEntity.getItem();
+		if (!self.wantsToPickUp(stack)) {
+			return;
+		}
+		self.take(itemEntity, stack.getCount());
+		ItemStack rest = this.hamlet$stock.addItem(stack);
+		if (rest.isEmpty()) {
+			itemEntity.discard();
+		} else {
+			stack.setCount(rest.getCount());
+		}
 	}
 
 	@Inject(method = "startTrading", at = @At("HEAD"), cancellable = true)

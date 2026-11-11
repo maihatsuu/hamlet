@@ -1,7 +1,7 @@
 package maihatsuu.hamlet;
 
 import maihatsuu.hamlet.command.HamletCommands;
-import maihatsuu.hamlet.data.ProfessionDataLoader;
+import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.entity.HamletEntities;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletProfessions;
@@ -33,7 +33,7 @@ public class Hamlet implements ModInitializer {
 		TendAnimals.init();
 		HamletWorldgen.init();
 		HamletCommands.register();
-		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ProfessionDataLoader());
+		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new PriceLoader());
 	}
 
 	public static ResourceLocation id(String path) {

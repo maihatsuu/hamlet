@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import maihatsuu.hamlet.data.ProfessionDataLoader;
+import maihatsuu.hamlet.data.PriceLoader;
 
 import net.minecraft.Util;
 import net.minecraft.world.entity.npc.WanderingTrader;
@@ -28,11 +28,11 @@ abstract class WanderingTraderMixin {
 	@Unique
 	private static final int MAX_USES = 8;
 
-	// The trader's data file doubles as its catalogue: each visit it offers a random selection of those items.
+	// Each visit, the trader offers a random selection from its catalogue.
 	@Inject(method = "updateTrades", at = @At("HEAD"), cancellable = true)
 	private void hamlet$sellCatalogue(CallbackInfo ci) {
 		WanderingTrader self = (WanderingTrader) (Object) this;
-		List<Map.Entry<Item, Integer>> catalogue = new ArrayList<>(ProfessionDataLoader.getWanderingTrader().prices().entrySet());
+		List<Map.Entry<Item, Integer>> catalogue = new ArrayList<>(PriceLoader.wanderingTraderCatalogue().entrySet());
 		Util.shuffle(catalogue, self.getRandom());
 
 		MerchantOffers offers = self.getOffers();

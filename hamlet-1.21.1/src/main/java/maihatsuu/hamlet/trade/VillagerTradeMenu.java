@@ -8,8 +8,7 @@ import java.util.function.Predicate;
 import org.jetbrains.annotations.Nullable;
 
 import maihatsuu.hamlet.Hamlet;
-import maihatsuu.hamlet.data.ProfessionData;
-import maihatsuu.hamlet.data.ProfessionDataLoader;
+import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
 
@@ -39,8 +38,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /**
- * The villager's stock is shown in real slots so vanilla syncs it, but it can't be taken directly. Every
- * trade is a click on a row of the offer list, sent through {@link #clickMenuButton}:
+ * The villager's inventory is shown in real slots. Items with a price (the same for every villager) are stock:
+ * they can't be taken or placed directly, only bought. Anything else is the player's to put in and take
+ * out (food, for breeding, once that's designed). Every trade is a click on a row of the offer list,
+ * sent through {@link #clickMenuButton}:
  * <ul>
  *   <li>below {@code STOCK_SIZE}: buy one item from that stock slot; {@code STOCK_SIZE + slot}: buy as
  *   many from that slot as the player can afford;</li>
@@ -126,7 +127,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 	/** Claims the villager for this player and opens the screen. */
 	public static void open(Villager villager, Player player) {
 		VillagerProfession profession = villager.getVillagerData().getProfession();
-		Map<Item, Integer> prices = ProfessionDataLoader.get(profession).prices();
+		Map<Item, Integer> prices = PriceLoader.prices();
 		villager.setTradingPlayer(player);
 		player.openMenu(new ExtendedScreenHandlerFactory<TradeOpeningData>() {
 			@Override
@@ -153,8 +154,14 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		});
 	}
 
+	/** Only meaningful for priced items; see {@link #isPriced}. */
 	public int priceOf(Item item) {
-		return this.prices.getOrDefault(item, ProfessionData.DEFAULT_PRICE);
+		return this.prices.getOrDefault(item, 0);
+	}
+
+	/** Whether villagers sell the item, so it's stock to buy rather than the player's to take. */
+	public boolean isPriced(ItemStack stack) {
+		return !stack.isEmpty() && this.prices.containsKey(stack.getItem());
 	}
 
 	public SimpleContainer getStock() {
@@ -191,12 +198,8 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 
 	private boolean buy(Player player, int slot, boolean asManyAsPossible) {
 		ItemStack stack = this.stock.getItem(slot);
-		if (stack.isEmpty()) {
+		if (!this.isPriced(stack)) {
 			return false;
-		}
-
-		if (!this.prices.containsKey(stack.getItem())) {
-			Hamlet.LOGGER.warn("No price set for {}; using the default", BuiltInRegistries.ITEM.getKey(stack.getItem()));
 		}
 
 		Inventory inventory = player.getInventory();
@@ -282,21 +285,31 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		return false;
 	}
 
-	/** Shift-click moves items between the player's inventory and hotbar, as in vanilla's trading screen. */
+	/**
+	 * Shift-click moves an unpriced item between the villager's inventory and the player's; otherwise, as
+	 * in vanilla's trading screen, between the player's inventory and hotbar.
+	 */
 	@Override
 	public ItemStack quickMoveStack(Player player, int index) {
 		int inventoryStart = STOCK_SIZE;
 		int hotbarStart = inventoryStart + 27;
 		int hotbarEnd = hotbarStart + 9;
 		Slot slot = this.slots.get(index);
-		if (index < inventoryStart || !slot.hasItem()) {
+		if (!slot.hasItem() || !slot.mayPickup(player)) {
 			return ItemStack.EMPTY;
 		}
 		ItemStack stack = slot.getItem();
 		ItemStack original = stack.copy();
-		boolean moved = index < hotbarStart
-			? this.moveItemStackTo(stack, hotbarStart, hotbarEnd, false)
-			: this.moveItemStackTo(stack, inventoryStart, hotbarStart, false);
+		boolean moved;
+		if (index < inventoryStart) {
+			moved = this.moveItemStackTo(stack, inventoryStart, hotbarEnd, true);
+		} else if (!this.isPriced(stack) && this.moveItemStackTo(stack, 0, inventoryStart, false)) {
+			moved = true;
+		} else {
+			moved = index < hotbarStart
+				? this.moveItemStackTo(stack, hotbarStart, hotbarEnd, false)
+				: this.moveItemStackTo(stack, inventoryStart, hotbarStart, false);
+		}
 		if (!moved) {
 			return ItemStack.EMPTY;
 		}
@@ -306,11 +319,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			slot.setChanged();
 		}
 		return original;
-	}
-
-	@Override
-	public boolean canTakeItemForPickAll(ItemStack carried, Slot slot) {
-		return !(slot instanceof StockSlot) && super.canTakeItemForPickAll(carried, slot);
 	}
 
 	@Override
@@ -329,20 +337,20 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		}
 	}
 
-	/** Shows the villager's stock; buying goes through the offer list instead. */
-	public static class StockSlot extends Slot {
+	/** A slot of the villager's inventory: priced items here are stock, bought from the offer list. */
+	public class StockSlot extends Slot {
 		private StockSlot(SimpleContainer container, int slot, int x, int y) {
 			super(container, slot, x, y);
 		}
 
 		@Override
 		public boolean mayPlace(ItemStack stack) {
-			return false;
+			return !VillagerTradeMenu.this.isPriced(stack);
 		}
 
 		@Override
 		public boolean mayPickup(Player player) {
-			return false;
+			return !VillagerTradeMenu.this.isPriced(this.getItem());
 		}
 	}
 }

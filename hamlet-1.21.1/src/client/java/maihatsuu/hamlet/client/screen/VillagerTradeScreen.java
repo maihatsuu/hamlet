@@ -24,15 +24,14 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /**
- * Laid out like vanilla's trading screen: an offer list on the left, and on the right the villager's stock
- * above the player's inventory. Every service and every kind of stock item is a row; clicking a row makes
+ * Laid out like vanilla's trading screen: an offer list on the left, and on the right the villager's
+ * inventory above the player's. Priced items in the villager's inventory are stock, bought from the list;
+ * anything else can be moved in and out like a chest. Every service and every kind of stock item is a row; clicking a row makes
  * the trade at once. Rows are rebuilt from what the client can see each frame, so they always match.
  */
 public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMenu> {
@@ -141,7 +140,8 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 		List<ItemStack> listed = new ArrayList<>();
 		for (int slot = 0; slot < stock.getContainerSize(); slot++) {
 			ItemStack stack = stock.getItem(slot);
-			if (stack.isEmpty() || listed.stream().anyMatch(s -> ItemStack.isSameItemSameComponents(s, stack))) {
+			// Unpriced items are the player's own, put there to take back, not stock for sale.
+			if (!this.menu.isPriced(stack) || listed.stream().anyMatch(s -> ItemStack.isSameItemSameComponents(s, stack))) {
 				continue;
 			}
 			listed.add(stack);
@@ -286,7 +286,7 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 	@Override
 	protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
 		List<Component> tooltip = new ArrayList<>(super.getTooltipFromContainerItem(stack));
-		if (this.hoveredSlot instanceof VillagerTradeMenu.StockSlot) {
+		if (this.hoveredSlot instanceof VillagerTradeMenu.StockSlot && this.menu.isPriced(stack)) {
 			tooltip.add(this.priceLine(this.menu.priceOf(stack.getItem())));
 		}
 		return tooltip;
@@ -295,15 +295,6 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 	private Component priceLine(int price) {
 		boolean affordable = this.minecraft.player.getInventory().countItem(Items.EMERALD) >= price;
 		return Component.translatable("hamlet.trade.price", price).withStyle(affordable ? ChatFormatting.GREEN : ChatFormatting.RED);
-	}
-
-	@Override
-	protected void slotClicked(Slot slot, int slotId, int button, ClickType clickType) {
-		// The stock is only for looking at; buying is done from the offer list.
-		if (slot instanceof VillagerTradeMenu.StockSlot) {
-			return;
-		}
-		super.slotClicked(slot, slotId, button, clickType);
 	}
 
 	/**

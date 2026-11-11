@@ -12,7 +12,12 @@ Needs to be installed on both server and client (custom trading screen).
 - **Trading screen:** laid out like vanilla's. On the left, a scrolling list of offers: the
   profession's services first, then one row for each kind of item in stock. Clicking a row makes the
   trade at once (shift-click buys as many of a stock item as you can afford). On the right, the
-  villager's inventory, view only, above your own. A service that copies an item gets a row for each
+  villager's inventory above your own. Items with a price are stock: they can only be bought, and
+  you can't place them there. Anything else can be put in and taken out freely, and isn't for sale.
+- **Prices:** one global list, the same for every villager whatever its profession, so changing or
+  losing a job doesn't make its stock free. Data-driven: `data/<namespace>/hamlet/prices/*.json`
+  files are merged, so mods and datapacks can add their own. The wandering trader's catalogue is
+  separate (`hamlet/wandering_trader.json`). A service that copies an item gets a row for each
   matching item you carry, so you pick which one.
 - **Jobs:** the workstation gives a villager its job, and it keeps that job until the workstation is
   destroyed, whether or not it has been traded with.
@@ -48,8 +53,8 @@ Only these professions exist; all others are deprecated.
 
 Villagers breed when they have enough good food, provided by the player. Farmers no longer supply it.
 
-Villagers never pick items up off the ground, which is how vanilla villagers get food, so breeding is
-disabled until a way to feed them is chosen.
+Villagers pick up any item off the ground while it fits in their inventory, Hamlet's, not vanilla's. Vanilla's breeding reads vanilla's
+inventory, so breeding stays off until Hamlet decides what counts as good food there.
 
 ## Emeralds
 
@@ -66,12 +71,15 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 
 ## Open questions
 
-- **Prices:** what do Stock items and maps cost, and are they fixed or data-driven?
 - **Stock limits:** does a full inventory stop a villager working? How much can each hold?
 - **Work rates:** how often does each profession produce? (Keeps output from outpacing normal farms.)
   A fisherman on vanilla bite timing makes about 20 catches per working day.
-- **Good food:** how do players give villagers food now that they don't pick items up? Which foods
-  count, and how much is enough?
+- **Good food:** players will give villagers food by putting it in the villager's inventory (unpriced
+  items go in freely) or throwing it to them. Which foods count, and how much is enough? Priced food, such as carrots,
+  can't be placed there by hand, but a villager picks it up if thrown, which turns it into stock for
+  sale. Should thrown priced items be refused, or count as food?
+- **Unpriced output:** an item a villager produces with no price set (such as modded fishing loot)
+  becomes free to take. The price list needs to cover everything a villager can produce.
 - **Workstations:** decide what happens if a workstation is moved rather than destroyed. Carry On can
   lift lecterns, barrels and similar blocks (Carry On may be removed from the pack anyway). Decorated
   pots also shatter when hit by projectiles, which would cost the villager its job.
@@ -84,10 +92,14 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 
 ## Testing
 
+- Right-click any adult villager, including jobless villagers and nitwits: the trading screen opens. Babies refuse.
+- Throw any item near a villager: it picks it up into its inventory, and stops once that's full.
+
 - Place and break a workstation: job is gained and lost, with no trading involved.
 - Remove a villager's bed: it stops working, its trade screen says "no bed", it still sells its
   stock, and it resumes once it claims a new bed.
 - The villager's inventory on the trading screen matches what it produced; buying a row removes it.
+- Unpriced items can be put into and taken from the villager's inventory, including by shift-click; priced items can't be taken or placed.
 - Farmer patrols its field, harvests mature crops one at a time, and leaves a mixed crop layout
   unchanged. Crops more than 9 blocks from its composter are left alone.
 - Villagers ignore items dropped on the ground.
