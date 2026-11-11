@@ -1,6 +1,5 @@
 {
-	"work_interval": 1000,
 	"prices": {
-		"minecraft:filled_map": 12
+		"minecraft:filled_map": 8
 	}
 }

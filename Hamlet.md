@@ -9,9 +9,11 @@ Needs to be installed on both server and client (custom trading screen).
 ## Core rules
 
 - **Inventory:** villagers have an expanded internal inventory. All work output is stored there.
-- **Trading screen, two tabs:**
-  - **Stock:** the villager's whole inventory; buy anything in it.
-  - **Service:** that profession's services, if it has any.
+- **Trading screen:** laid out like vanilla's. On the left, a scrolling list of offers: the
+  profession's services first, then one row for each kind of item in stock. Clicking a row makes the
+  trade at once (shift-click buys as many of a stock item as you can afford). On the right, the
+  villager's inventory, view only, above your own. A service that copies an item gets a row for each
+  matching item you carry, so you pick which one.
 - **Jobs:** the workstation gives a villager its job, and it keeps that job until the workstation is
   destroyed, whether or not it has been traded with.
 - **No level progression.** Every villager can do everything its profession offers from the start.
@@ -36,8 +38,8 @@ Only these professions exist; all others are deprecated.
 | Shepherd | Loom | Spends its work period wandering within 12 blocks of its loom. When an animal is ready, it walks up to it holding the right tool and stores what it gives: wool from sheep (when they have wool), and every 5 minutes milk from cows and goats, mushroom stew from mooshrooms, a scute from armadillos (not while rolled up) and an egg from chickens. | Stock: wool, milk, mushroom stew, armadillo scutes, eggs. |
 | Beekeeper | Smoker | Spends its work period wandering within 12 blocks of its smoker. When a hive or bee nest nearby is full of honey and smoked by a lit campfire below it (vanilla's check for calm bees), it walks over and harvests it, picking at random between shears (3 honeycomb) and a glass bottle (1 honey bottle), as a player would. Unsmoked hives are left alone, so the bees are never angered. Smokers are free because the butcher is retired: a villager that would become a butcher becomes a beekeeper. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores a catch rolled from vanilla's `gameplay/fishing` loot table, the one players use, so mod and datapack changes to fishing loot apply. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
-| Librarian | Lectern | Copies the book on its lectern. | Sells copies of written books and Archive tomes. Designed together with Archive. |
-| Cartographer | Cartography table | | Sells explorer maps for the most important structures. |
+| Librarian | Lectern | Stays near its lectern during its work period. | Service: copy an enchanted book. Enchanted book + 8 emeralds = 2 enchanted books. Archive tomes to follow, designed together with Archive. |
+| Cartographer | Cartography table | Stays near its cartography table during its work period, and uses its visits to the table to look up nearby structures ahead of time. | Service: an explorer map to the nearest ocean monument, woodland mansion or trial chambers, 8 emeralds each. |
 | Archaeologist | Decorated pot | | Service: duplicate a smithing template. Template + 1 emerald = 2 templates. Vanilla's duplication recipes are removed. |
 | Cleric | Brewing stand | | Service: bottle your experience. 1 emerald + 1 level = 1 Bottle o' Enchanting. With Archive this is effectively 1:1, so the only cost of storing a level is the emerald. |
 | Wandering Trader | None | | Sells saplings, coral blocks, seeds and tall flowers. |
@@ -78,7 +80,6 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
   villages?
 - **Raid farms:** raids are now a main emerald source, so a raid farm nerf matters more (see NOTES).
 - **Emerald ore:** part of Hamlet, or Rebalanced Core worldgen?
-- **Cartographer:** finding structures for maps can cause lag; search ahead of time or cache results?
 - **Trade screen:** how to display a large inventory, and how Jade or other mods show villagers.
 
 ## Testing
@@ -86,7 +87,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Place and break a workstation: job is gained and lost, with no trading involved.
 - Remove a villager's bed: it stops working, its trade screen says "no bed", it still sells its
   stock, and it resumes once it claims a new bed.
-- Stock tab matches what the villager actually produced; buying removes it.
+- The villager's inventory on the trading screen matches what it produced; buying a row removes it.
 - Farmer patrols its field, harvests mature crops one at a time, and leaves a mixed crop layout
   unchanged. Crops more than 9 blocks from its composter are left alone.
 - Villagers ignore items dropped on the ground.
@@ -96,6 +97,8 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Fisherman only catches treasure near open water.
 - Shepherd walks up to woolly sheep with shears and shears them into its stock; also milks cows and goats, gets stew from mooshrooms, brushes armadillos and gathers eggs.
 - Beekeeper claims a smoker, walks to full hives with a lit campfire under them and harvests them without angering the bees; full hives without a campfire are left alone.
+- Librarian lists a copy row for each enchanted book you carry; clicking one costs 8 emeralds and gives the copy.
+- Cartographer lists each explorer map at 8 emeralds, pointing at the nearest structure.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Breeding works with player food and doesn't happen without it.
 - New villages contain the new houses and no retired ones.

@@ -33,32 +33,15 @@ abstract class VillagerMixin implements HamletVillager {
 	@Unique
 	private final SimpleContainer hamlet$stock = new SimpleContainer(STOCK_SIZE);
 
-	@Unique
-	private static final String LAST_WORKED_KEY = "hamlet:LastWorked";
-
-	@Unique
-	private long hamlet$lastWorked = NEVER_WORKED;
-
 	@Override
 	public SimpleContainer hamlet$getStock() {
 		return this.hamlet$stock;
-	}
-
-	@Override
-	public long hamlet$getLastWorked() {
-		return this.hamlet$lastWorked;
-	}
-
-	@Override
-	public void hamlet$setLastWorked(long gameTime) {
-		this.hamlet$lastWorked = gameTime;
 	}
 
 	@Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
 	private void hamlet$saveStock(CompoundTag tag, CallbackInfo ci) {
 		Villager self = (Villager) (Object) this;
 		tag.put(STOCK_KEY, this.hamlet$stock.createTag(self.registryAccess()));
-		tag.putLong(LAST_WORKED_KEY, this.hamlet$lastWorked);
 	}
 
 	// Loading writes the villager data directly, so it doesn't pass through setVillagerData.
@@ -66,7 +49,6 @@ abstract class VillagerMixin implements HamletVillager {
 	private void hamlet$loadAndNormalize(CompoundTag tag, CallbackInfo ci) {
 		Villager self = (Villager) (Object) this;
 		this.hamlet$stock.fromTag(tag.getList(STOCK_KEY, Tag.TAG_COMPOUND), self.registryAccess());
-		this.hamlet$lastWorked = tag.contains(LAST_WORKED_KEY) ? tag.getLong(LAST_WORKED_KEY) : NEVER_WORKED;
 
 		VillagerProfession savedProfession = self.getVillagerData().getProfession();
 		self.setVillagerData(self.getVillagerData());

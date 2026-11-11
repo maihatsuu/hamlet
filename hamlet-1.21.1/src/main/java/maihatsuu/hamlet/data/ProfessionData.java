@@ -10,18 +10,13 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.Item;
 
 /** Datapack-defined balance values for one profession. Prices are in emeralds per item. */
-public record ProfessionData(Map<Item, Integer> prices, int workInterval) {
-	/** One in-game hour. */
-	public static final int DEFAULT_WORK_INTERVAL = 1000;
+public record ProfessionData(Map<Item, Integer> prices) {
 	public static final int DEFAULT_PRICE = 1;
-	public static final ProfessionData EMPTY = new ProfessionData(Map.of(), DEFAULT_WORK_INTERVAL);
+	public static final ProfessionData EMPTY = new ProfessionData(Map.of());
 
 	public static final Codec<ProfessionData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
 		Codec.unboundedMap(BuiltInRegistries.ITEM.byNameCodec(), ExtraCodecs.POSITIVE_INT)
 			.optionalFieldOf("prices", Map.of())
-			.forGetter(ProfessionData::prices),
-		ExtraCodecs.POSITIVE_INT
-			.optionalFieldOf("work_interval", DEFAULT_WORK_INTERVAL)
-			.forGetter(ProfessionData::workInterval)
+			.forGetter(ProfessionData::prices)
 	).apply(instance, ProfessionData::new));
 }
