@@ -28,6 +28,8 @@ Needs to be installed on both server and client (custom trading screen).
   destroyed, whether or not it has been traded with.
 - **No level progression.** Every villager can do everything its profession offers from the start.
 - **Zombie curing doesn't affect prices.**
+- **Healing:** villagers slowly regenerate, half a heart every 5 seconds, so occasional damage from
+  bad pathfinding doesn't add up.
 - **Zombification:** a villager killed by a zombie always turns into a zombie villager, on every
   difficulty.
 
@@ -94,6 +96,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 
 ## Testing
 
+- Hurt a villager: it heals half a heart every 5 seconds until it's at full health.
 - Right-click any adult villager, including jobless villagers and nitwits: the trading screen opens. Babies refuse.
 - Throw any item near a villager: it picks it up into its storage, not its stock, and stops once storage is full.
 

@@ -34,6 +34,9 @@ abstract class VillagerMixin implements HamletVillager {
 	private static final String STOCK_KEY = "hamlet:Stock";
 	@Unique
 	private static final String STORAGE_KEY = "hamlet:Storage";
+	/** Ticks between each half heart healed: a villager at 1 health is whole again after about 3 minutes. */
+	@Unique
+	private static final int REGENERATION_INTERVAL = 100;
 
 	@Unique
 	private final SimpleContainer hamlet$stock = new SimpleContainer(STOCK_SIZE);
@@ -106,6 +109,15 @@ abstract class VillagerMixin implements HamletVillager {
 	)
 	private boolean hamlet$alwaysOpen(boolean noOffers) {
 		return false;
+	}
+
+	// Vanilla villagers never heal on their own, so the odd fall or bump from pathfinding adds up.
+	@Inject(method = "customServerAiStep", at = @At("TAIL"))
+	private void hamlet$regenerate(CallbackInfo ci) {
+		Villager self = (Villager) (Object) this;
+		if (self.isAlive() && self.getHealth() < self.getMaxHealth() && self.tickCount % REGENERATION_INTERVAL == 0) {
+			self.heal(1.0F);
+		}
 	}
 
 	// Vanilla stops jobless villagers trading every tick, which would close their screen at once.
