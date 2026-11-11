@@ -3,6 +3,7 @@ package maihatsuu.hamlet.mixin;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 
+import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.VillagerRules;
@@ -31,19 +32,29 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class VillagerMixin implements HamletVillager {
 	@Unique
 	private static final String STOCK_KEY = "hamlet:Stock";
+	@Unique
+	private static final String STORAGE_KEY = "hamlet:Storage";
 
 	@Unique
 	private final SimpleContainer hamlet$stock = new SimpleContainer(STOCK_SIZE);
+	@Unique
+	private final SimpleContainer hamlet$storage = new SimpleContainer(STORAGE_SIZE);
 
 	@Override
 	public SimpleContainer hamlet$getStock() {
 		return this.hamlet$stock;
 	}
 
+	@Override
+	public SimpleContainer hamlet$getStorage() {
+		return this.hamlet$storage;
+	}
+
 	@Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
 	private void hamlet$saveStock(CompoundTag tag, CallbackInfo ci) {
 		Villager self = (Villager) (Object) this;
 		tag.put(STOCK_KEY, this.hamlet$stock.createTag(self.registryAccess()));
+		tag.put(STORAGE_KEY, this.hamlet$storage.createTag(self.registryAccess()));
 	}
 
 	// Loading writes the villager data directly, so it doesn't pass through setVillagerData.
@@ -51,6 +62,11 @@ abstract class VillagerMixin implements HamletVillager {
 	private void hamlet$loadAndNormalize(CompoundTag tag, CallbackInfo ci) {
 		Villager self = (Villager) (Object) this;
 		this.hamlet$stock.fromTag(tag.getList(STOCK_KEY, Tag.TAG_COMPOUND), self.registryAccess());
+		if (tag.contains(STORAGE_KEY)) {
+			this.hamlet$storage.fromTag(tag.getList(STORAGE_KEY, Tag.TAG_COMPOUND), self.registryAccess());
+		} else {
+			this.hamlet$moveUnpricedToStorage();
+		}
 
 		VillagerProfession savedProfession = self.getVillagerData().getProfession();
 		self.setVillagerData(self.getVillagerData());
@@ -59,6 +75,21 @@ abstract class VillagerMixin implements HamletVillager {
 
 		if (self.getVillagerData().getProfession() != savedProfession && self.level() instanceof ServerLevel level) {
 			self.refreshBrain(level);
+		}
+	}
+
+	/**
+	 * Saves from before storage existed kept players' unpriced items in the stock. Move them to storage so
+	 * they stay the player's to take. Whatever doesn't fit stays in stock, for sale at the default price;
+	 * spawning item entities while the villager is still loading isn't safe.
+	 */
+	@Unique
+	private void hamlet$moveUnpricedToStorage() {
+		for (int slot = 0; slot < this.hamlet$stock.getContainerSize(); slot++) {
+			ItemStack stack = this.hamlet$stock.getItem(slot);
+			if (!stack.isEmpty() && !PriceLoader.prices().containsKey(stack.getItem()) && this.hamlet$storage.canAddItem(stack)) {
+				this.hamlet$stock.setItem(slot, this.hamlet$storage.addItem(stack));
+			}
 		}
 	}
 
@@ -86,15 +117,15 @@ abstract class VillagerMixin implements HamletVillager {
 		return false;
 	}
 
-	// Villagers pick up anything that fits in Hamlet's inventory. This covers both pickup paths: Mob.aiStep
+	// Villagers pick up anything that fits in their storage. This covers both pickup paths: Mob.aiStep
 	// checks it before picking up, and the item sensor behind GoToWantedItem filters by it.
 	@Inject(method = "wantsToPickUp", at = @At("HEAD"), cancellable = true)
 	private void hamlet$wantsAnything(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-		cir.setReturnValue(this.hamlet$stock.canAddItem(stack));
+		cir.setReturnValue(this.hamlet$storage.canAddItem(stack));
 	}
 
 	@Inject(method = "pickUpItem", at = @At("HEAD"), cancellable = true)
-	private void hamlet$pickUpIntoStock(ItemEntity itemEntity, CallbackInfo ci) {
+	private void hamlet$pickUpIntoStorage(ItemEntity itemEntity, CallbackInfo ci) {
 		ci.cancel();
 		Villager self = (Villager) (Object) this;
 		ItemStack stack = itemEntity.getItem();
@@ -102,7 +133,7 @@ abstract class VillagerMixin implements HamletVillager {
 			return;
 		}
 		self.take(itemEntity, stack.getCount());
-		ItemStack rest = this.hamlet$stock.addItem(stack);
+		ItemStack rest = this.hamlet$storage.addItem(stack);
 		if (rest.isEmpty()) {
 			itemEntity.discard();
 		} else {

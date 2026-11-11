@@ -8,17 +8,22 @@ Needs to be installed on both server and client (custom trading screen).
 
 ## Core rules
 
-- **Inventory:** villagers have an expanded internal inventory. All work output is stored there.
+- **Inventory:** villagers have two inventories.
+  - **Stock** (27 slots): all work output. Players never reach it directly; it's only sold, through
+    the trading screen. A full stock stops the villager working.
+  - **Storage** (9 slots): anything players put in, and anything the villager picks up off the ground.
+    Players can take it back freely. It's never for sale and doesn't affect work.
 - **Trading screen:** laid out like vanilla's. On the left, a scrolling list of offers: the
-  profession's services first, then one row for each kind of item in stock. Clicking a row makes the
-  trade at once (shift-click buys as many of a stock item as you can afford). On the right, the
-  villager's inventory above your own. Items with a price are stock: they can only be bought, and
-  you can't place them there. Anything else can be put in and taken out freely, and isn't for sale.
+  profession's services first, then one row for each kind of item in stock. Clicking a row selects it
+  and moves its cost into the two payment slots; the result slot shows what you'll get, and taking it
+  makes the trade (shift-click repeats it while you can pay). On the right: the villager's storage,
+  the payment and result slots, and your inventory. A service that copies an item gets a row for each
+  matching item you carry, so you pick which one.
 - **Prices:** one global list, the same for every villager whatever its profession, so changing or
   losing a job doesn't make its stock free. Data-driven: `data/<namespace>/hamlet/prices/*.json`
   files are merged, so mods and datapacks can add their own. The wandering trader's catalogue is
-  separate (`hamlet/wandering_trader.json`). A service that copies an item gets a row for each
-  matching item you carry, so you pick which one.
+  separate (`hamlet/wandering_trader.json`). Anything without a price, such as modded fishing loot,
+  sells for 1 emerald.
 - **Jobs:** the workstation gives a villager its job, and it keeps that job until the workstation is
   destroyed, whether or not it has been traded with.
 - **No level progression.** Every villager can do everything its profession offers from the start.
@@ -53,8 +58,9 @@ Only these professions exist; all others are deprecated.
 
 Villagers breed when they have enough good food, provided by the player. Farmers no longer supply it.
 
-Villagers pick up any item off the ground while it fits in their inventory, Hamlet's, not vanilla's. Vanilla's breeding reads vanilla's
-inventory, so breeding stays off until Hamlet decides what counts as good food there.
+Villagers pick up any item off the ground into their storage while it has room. Vanilla's breeding
+reads vanilla's inventory, so breeding stays off until Hamlet decides what counts as good food in
+storage.
 
 ## Emeralds
 
@@ -74,12 +80,8 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - **Stock limits:** does a full inventory stop a villager working? How much can each hold?
 - **Work rates:** how often does each profession produce? (Keeps output from outpacing normal farms.)
   A fisherman on vanilla bite timing makes about 20 catches per working day.
-- **Good food:** players will give villagers food by putting it in the villager's inventory (unpriced
-  items go in freely) or throwing it to them. Which foods count, and how much is enough? Priced food, such as carrots,
-  can't be placed there by hand, but a villager picks it up if thrown, which turns it into stock for
-  sale. Should thrown priced items be refused, or count as food?
-- **Unpriced output:** an item a villager produces with no price set (such as modded fishing loot)
-  becomes free to take. The price list needs to cover everything a villager can produce.
+- **Good food:** players give villagers food by putting it in their storage or throwing it to them.
+  Which foods count, and how much is enough?
 - **Workstations:** decide what happens if a workstation is moved rather than destroyed. Carry On can
   lift lecterns, barrels and similar blocks (Carry On may be removed from the pack anyway). Decorated
   pots also shatter when hit by projectiles, which would cost the villager its job.
@@ -93,13 +95,15 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 ## Testing
 
 - Right-click any adult villager, including jobless villagers and nitwits: the trading screen opens. Babies refuse.
-- Throw any item near a villager: it picks it up into its inventory, and stops once that's full.
+- Throw any item near a villager: it picks it up into its storage, not its stock, and stops once storage is full.
 
 - Place and break a workstation: job is gained and lost, with no trading involved.
 - Remove a villager's bed: it stops working, its trade screen says "no bed", it still sells its
   stock, and it resumes once it claims a new bed.
-- The villager's inventory on the trading screen matches what it produced; buying a row removes it.
-- Unpriced items can be put into and taken from the villager's inventory, including by shift-click; priced items can't be taken or placed.
+- The offer list matches what the villager produced. Selecting a row moves its emeralds into the payment slots; taking the result buys one and removes it from stock; shift-clicking the result buys repeatedly until the emeralds or stock run out.
+- Closing the screen returns anything left in the payment slots.
+- Any item can be put into and taken from the storage row, including by shift-click.
+- An old save's unpriced stock items move into storage.
 - Farmer patrols its field, harvests mature crops one at a time, and leaves a mixed crop layout
   unchanged. Crops more than 9 blocks from its composter are left alone.
 - Villagers ignore items dropped on the ground.
@@ -109,7 +113,8 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Fisherman only catches treasure near open water.
 - Shepherd walks up to woolly sheep with shears and shears them into its stock; also milks cows and goats, gets stew from mooshrooms, brushes armadillos and gathers eggs.
 - Beekeeper claims a smoker, walks to full hives with a lit campfire under them and harvests them without angering the bees; full hives without a campfire are left alone.
-- Librarian lists a copy row for each enchanted book you carry; clicking one costs 8 emeralds and gives the copy.
+- Librarian lists a copy row for each enchanted book you carry; selecting one moves the book and 8 emeralds in; the result is a copy, and the original stays in the payment slot.
+- Cleric's bottle can't be taken without a level.
 - Cartographer lists each explorer map at 8 emeralds, pointing at the nearest structure.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Breeding works with player food and doesn't happen without it.

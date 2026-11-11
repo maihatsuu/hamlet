@@ -8,7 +8,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import org.jetbrains.annotations.Nullable;
 
 import maihatsuu.hamlet.Hamlet;
-import maihatsuu.hamlet.trade.Service;
+import maihatsuu.hamlet.trade.Offer;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 
 import net.minecraft.ChatFormatting;
@@ -16,23 +16,19 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
- * Laid out like vanilla's trading screen: an offer list on the left, and on the right the villager's
- * inventory above the player's. Priced items in the villager's inventory are stock, bought from the list;
- * anything else can be moved in and out like a chest. Every service and every kind of stock item is a row; clicking a row makes
- * the trade at once. Rows are rebuilt from what the client can see each frame, so they always match.
+ * Laid out like vanilla's trading screen: an offer list on the left; on the right the villager's storage,
+ * the payment and result slots, and the player's inventory. Clicking a row selects that offer, moving its
+ * cost into the payment slots; taking the result makes the trade. Rows are rebuilt each tick from what the
+ * client can see, the same way the server builds them.
  */
 public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMenu> {
 	private static final ResourceLocation BACKGROUND = Hamlet.id("textures/gui/container/villager.png");
@@ -40,8 +36,8 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 	private static final ResourceLocation SCROLLER_DISABLED_SPRITE = ResourceLocation.withDefaultNamespace("container/villager/scroller_disabled");
 	private static final ResourceLocation TRADE_ARROW_SPRITE = ResourceLocation.withDefaultNamespace("container/villager/trade_arrow");
 	private static final ResourceLocation TRADE_ARROW_UNAVAILABLE_SPRITE = ResourceLocation.withDefaultNamespace("container/villager/trade_arrow_out_of_stock");
-	private static final ResourceLocation EMPTY_SLOT_TEMPLATE = ResourceLocation.withDefaultNamespace("item/empty_slot_smithing_template_armor_trim");
-	private static final ResourceLocation EMPTY_SLOT_ENCHANTED_BOOK = Hamlet.id("item/empty_slot_enchanted_book");
+	private static final ResourceLocation LEVEL_SPRITE = ResourceLocation.withDefaultNamespace("container/enchanting_table/level_1");
+	private static final ResourceLocation LEVEL_DISABLED_SPRITE = ResourceLocation.withDefaultNamespace("container/enchanting_table/level_1_disabled");
 	private static final Component TRADES_LABEL = Component.translatable("merchant.trades");
 
 	// The same layout numbers as vanilla's MerchantScreen.
@@ -56,16 +52,19 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 	private static final int ROW_HEIGHT = 20;
 	private static final int COST_A_X = 5;
 	private static final int COST_B_X = 35;
-	private static final int ARROW_X = 60;
+	private static final int ARROW_X = 55;
 	private static final int RESULT_X = 68;
 	private static final int SCROLL_BAR_X = 94;
 	private static final int SCROLL_BAR_HEIGHT = 139;
 	private static final int SCROLLER_WIDTH = 6;
 	private static final int SCROLLER_HEIGHT = 27;
 	private static final int INVENTORIES_X = 107;
+	private static final int INVENTORY_LABEL_Y = 73;
 
 	private final RowButton[] rowButtons = new RowButton[ROWS];
-	private List<Row> rows = List.of();
+	private List<Offer> rows = List.of();
+	@Nullable
+	private Offer selected;
 	private int scrollOff;
 	private boolean isDragging;
 
@@ -74,7 +73,7 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 		this.imageWidth = IMAGE_WIDTH;
 		this.imageHeight = IMAGE_HEIGHT;
 		this.inventoryLabelX = INVENTORIES_X;
-		this.inventoryLabelY = this.imageHeight - 94;
+		this.inventoryLabelY = INVENTORY_LABEL_Y;
 	}
 
 	@Override
@@ -85,100 +84,27 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 				new RowButton(this.leftPos + ROW_X, this.topPos + ROW_TOP + index * ROW_HEIGHT, index)
 			);
 		}
-		this.rows = this.buildRows();
+		this.rows = this.menu.offers();
 	}
 
 	@Override
 	protected void containerTick() {
 		super.containerTick();
-		this.rows = this.buildRows();
+		this.rows = this.menu.offers();
 		this.scrollOff = Mth.clamp(this.scrollOff, 0, Math.max(0, this.rows.size() - ROWS));
-	}
-
-	/** Services first, since they're always on offer, then one row per kind of item in stock. */
-	private List<Row> buildRows() {
-		List<Row> rows = new ArrayList<>();
-		Player player = this.minecraft.player;
-		Inventory inventory = player.getInventory();
-		int emeralds = inventory.countItem(Items.EMERALD);
-
-		Service other = this.menu.getOtherService();
-		if (other == Service.BOTTLE_EXPERIENCE) {
-			boolean available = emeralds >= other.cost && VillagerTradeMenu.hasLevelToBottle(player);
-			rows.add(new Row(emeraldsStack(other.cost), ItemStack.EMPTY, new ItemStack(Items.EXPERIENCE_BOTTLE),
-				VillagerTradeMenu.EXPERIENCE_BUTTON, -1, available, Component.translatable("hamlet.service.costs_level"), null));
-		} else if (other != null && other.input != null) {
-			// A row for each kind of template or book the player is carrying, so they choose which to copy.
-			List<ItemStack> seen = new ArrayList<>();
-			for (int slot = 0; slot < VillagerTradeMenu.PLAYER_INVENTORY_SIZE; slot++) {
-				ItemStack stack = inventory.getItem(slot);
-				if (!other.input.test(stack) || seen.stream().anyMatch(s -> ItemStack.isSameItemSameComponents(s, stack))) {
-					continue;
-				}
-				seen.add(stack);
-				rows.add(new Row(stack.copyWithCount(1), emeraldsStack(other.cost), stack.copyWithCount(2),
-					VillagerTradeMenu.COPY_BUTTON + slot, -1, emeralds >= other.cost, null, null));
-			}
-			if (seen.isEmpty()) {
-				ResourceLocation hint = other == Service.DUPLICATE_TEMPLATE ? EMPTY_SLOT_TEMPLATE : EMPTY_SLOT_ENCHANTED_BOOK;
-				String bring = other == Service.DUPLICATE_TEMPLATE ? "hamlet.service.bring_template" : "hamlet.service.bring_enchanted_book";
-				rows.add(new Row(ItemStack.EMPTY, emeraldsStack(other.cost), ItemStack.EMPTY,
-					-1, -1, false, Component.translatable(bring), hint));
-			}
-		}
-
-		List<Service> maps = this.menu.getMapServices();
-		for (int index = 0; index < maps.size(); index++) {
-			Service service = maps.get(index);
-			ItemStack map = new ItemStack(Items.FILLED_MAP);
-			map.set(DataComponents.ITEM_NAME, Component.translatable(service.map.nameKey()));
-			rows.add(new Row(emeraldsStack(service.cost), ItemStack.EMPTY, map,
-				VillagerTradeMenu.MAP_BUTTON + index, -1, emeralds >= service.cost, null, null));
-		}
-
-		SimpleContainer stock = this.menu.getStock();
-		List<ItemStack> listed = new ArrayList<>();
-		for (int slot = 0; slot < stock.getContainerSize(); slot++) {
-			ItemStack stack = stock.getItem(slot);
-			// Unpriced items are the player's own, put there to take back, not stock for sale.
-			if (!this.menu.isPriced(stack) || listed.stream().anyMatch(s -> ItemStack.isSameItemSameComponents(s, stack))) {
-				continue;
-			}
-			listed.add(stack);
-			int price = this.menu.priceOf(stack.getItem());
-			int inStock = countInStock(stock, stack);
-			rows.add(new Row(emeraldsStack(Math.min(price, 64)), price > 64 ? emeraldsStack(price - 64) : ItemStack.EMPTY,
-				stack.copyWithCount(1), slot, inStock, emeralds >= price, null, null));
-		}
-		return rows;
-	}
-
-	private static int countInStock(SimpleContainer stock, ItemStack kind) {
-		int count = 0;
-		for (int slot = 0; slot < stock.getContainerSize(); slot++) {
-			ItemStack stack = stock.getItem(slot);
-			if (ItemStack.isSameItemSameComponents(stack, kind)) {
-				count += stack.getCount();
-			}
-		}
-		return count;
-	}
-
-	private static ItemStack emeraldsStack(int count) {
-		return new ItemStack(Items.EMERALD, count);
 	}
 
 	private void onRowPressed(int index) {
 		int row = index + this.scrollOff;
-		if (row >= this.rows.size() || this.rows.get(row).buttonId < 0) {
+		if (row >= this.rows.size() || !this.rows.get(row).selectable()) {
 			return;
 		}
-		int buttonId = this.rows.get(row).buttonId;
-		// Shift-click on stock buys as many from that slot as the player can afford.
-		if (buttonId < VillagerTradeMenu.STOCK_SIZE && Screen.hasShiftDown()) {
-			buttonId += VillagerTradeMenu.STOCK_SIZE;
-		}
-		this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, buttonId);
+		this.selected = this.rows.get(row);
+		this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, row);
+	}
+
+	private boolean isSelected(Offer offer) {
+		return this.selected != null && this.selected.sameTrade(offer);
 	}
 
 	@Override
@@ -208,7 +134,7 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 			}
 		}
 		for (RowButton button : this.rowButtons) {
-			if (button.visible && button.isHoveredOrFocused()) {
+			if (button.visible && button.isHovered()) {
 				button.renderTooltip(graphics, mouseX, mouseY);
 			}
 		}
@@ -216,18 +142,23 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 		this.renderTooltip(graphics, mouseX, mouseY);
 	}
 
-	private void renderRow(GuiGraphics graphics, Row row, int y) {
+	private void renderRow(GuiGraphics graphics, Offer row, int y) {
 		int x = this.leftPos + ROW_X;
 		graphics.pose().pushPose();
 		graphics.pose().translate(0.0F, 0.0F, 100.0F);
-		if (row.hintSprite != null) {
-			graphics.blit(x + COST_A_X, y, 0, 16, 16, this.minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(row.hintSprite));
+		if (row.hintSprite() != null) {
+			graphics.blit(x + COST_A_X, y, 0, 16, 16, this.minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(row.hintSprite()));
 		}
-		this.renderItem(graphics, row.costA, x + COST_A_X, y);
-		this.renderItem(graphics, row.costB, x + COST_B_X, y);
+		this.renderItem(graphics, row.costA(), x + COST_A_X, y);
+		this.renderItem(graphics, row.costB(), x + COST_B_X, y);
+		if (row.kind() == Offer.Kind.EXPERIENCE) {
+			// The level it costs, drawn as the enchanting table draws it.
+			boolean hasLevel = VillagerTradeMenu.hasLevelToBottle(this.minecraft.player);
+			graphics.blitSprite(hasLevel ? LEVEL_SPRITE : LEVEL_DISABLED_SPRITE, x + COST_B_X, y, 16, 16);
+		}
 		RenderSystem.enableBlend();
-		graphics.blitSprite(row.available ? TRADE_ARROW_SPRITE : TRADE_ARROW_UNAVAILABLE_SPRITE, x + ARROW_X, y + 3, 0, 10, 9);
-		this.renderItem(graphics, row.result, x + RESULT_X, y);
+		graphics.blitSprite(row.available() ? TRADE_ARROW_SPRITE : TRADE_ARROW_UNAVAILABLE_SPRITE, x + ARROW_X, y + 3, 0, 10, 9);
+		this.renderItem(graphics, row.result(), x + RESULT_X, y);
 		graphics.pose().popPose();
 	}
 
@@ -283,40 +214,6 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 		return true;
 	}
 
-	@Override
-	protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
-		List<Component> tooltip = new ArrayList<>(super.getTooltipFromContainerItem(stack));
-		if (this.hoveredSlot instanceof VillagerTradeMenu.StockSlot && this.menu.isPriced(stack)) {
-			tooltip.add(this.priceLine(this.menu.priceOf(stack.getItem())));
-		}
-		return tooltip;
-	}
-
-	private Component priceLine(int price) {
-		boolean affordable = this.minecraft.player.getInventory().countItem(Items.EMERALD) >= price;
-		return Component.translatable("hamlet.trade.price", price).withStyle(affordable ? ChatFormatting.GREEN : ChatFormatting.RED);
-	}
-
-	/**
-	 * One offer: up to two costs and a result, drawn like a vanilla trade.
-	 *
-	 * @param buttonId what to send when clicked, or -1 if the row can't be clicked
-	 * @param inStock how many the villager has, for stock rows; -1 for services
-	 * @param note an extra tooltip line, such as a cost that isn't an item
-	 * @param hintSprite drawn in the first cost's place, for a service missing its item
-	 */
-	private record Row(
-		ItemStack costA,
-		ItemStack costB,
-		ItemStack result,
-		int buttonId,
-		int inStock,
-		boolean available,
-		@Nullable Component note,
-		@Nullable ResourceLocation hintSprite
-	) {
-	}
-
 	private class RowButton extends Button {
 		final int index;
 
@@ -326,27 +223,37 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 			this.visible = false;
 		}
 
+		/** Drawn highlighted while its offer is selected, as vanilla's are. */
+		@Override
+		public boolean isHoveredOrFocused() {
+			return this.isHovered() || this.offer() != null && VillagerTradeScreen.this.isSelected(this.offer());
+		}
+
+		@Nullable
+		private Offer offer() {
+			int row = this.index + VillagerTradeScreen.this.scrollOff;
+			return row < VillagerTradeScreen.this.rows.size() ? VillagerTradeScreen.this.rows.get(row) : null;
+		}
+
 		/** Like vanilla: the tooltip of whichever item is under the mouse, plus the row's notes. */
 		void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-			int rowIndex = this.index + VillagerTradeScreen.this.scrollOff;
-			if (rowIndex >= VillagerTradeScreen.this.rows.size()) {
+			Offer row = this.offer();
+			if (row == null) {
 				return;
 			}
-			Row row = VillagerTradeScreen.this.rows.get(rowIndex);
-			ItemStack hovered = mouseX < this.getX() + 20 ? row.costA
-				: mouseX > this.getX() + 30 && mouseX < this.getX() + 50 ? row.costB
-				: mouseX > this.getX() + 65 ? row.result
+			ItemStack hovered = mouseX < this.getX() + 20 ? row.costA()
+				: mouseX > this.getX() + 30 && mouseX < this.getX() + 50 ? row.costB()
+				: mouseX > this.getX() + 65 ? row.result()
 				: ItemStack.EMPTY;
 			List<Component> lines = new ArrayList<>();
 			if (!hovered.isEmpty()) {
 				lines.addAll(Screen.getTooltipFromItem(VillagerTradeScreen.this.minecraft, hovered));
 			}
-			if (hovered == row.result && row.inStock >= 0) {
-				lines.add(Component.translatable("hamlet.trade.in_stock", row.inStock).withStyle(ChatFormatting.GRAY));
-				lines.add(Component.translatable("hamlet.trade.buy_hint").withStyle(ChatFormatting.GRAY));
+			if (hovered == row.result() && row.inStock() >= 0) {
+				lines.add(Component.translatable("hamlet.trade.in_stock", row.inStock()).withStyle(ChatFormatting.GRAY));
 			}
-			if (row.note != null && (hovered.isEmpty() || hovered == row.result)) {
-				lines.add(row.note.copy().withStyle(ChatFormatting.GRAY));
+			if (row.note() != null && (hovered.isEmpty() || hovered == row.result())) {
+				lines.add(row.note().copy().withStyle(ChatFormatting.GRAY));
 			}
 			if (!lines.isEmpty()) {
 				graphics.renderComponentTooltip(VillagerTradeScreen.this.font, lines, mouseX, mouseY);

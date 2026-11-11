@@ -6,6 +6,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.SimpleContainer;
+import maihatsuu.hamlet.Hamlet;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -29,6 +33,9 @@ final class Fishing {
 	 * Rolls one catch for {@code bobber} and stores it. Open water is judged at {@code water}, the block it
 	 * was cast to; FishingHookPredicateMixin lets the table's open-water conditions see that.
 	 */
+	/** Junk nobody would buy, so fishermen throw it away rather than filling their stock. */
+	private static final TagKey<Item> DISCARDS = TagKey.create(Registries.ITEM, Hamlet.id("fisherman_discards"));
+
 	static void catchInto(ServerLevel level, FishingBobber bobber, BlockPos water, SimpleContainer stock) {
 		bobber.setOpenWaterFishing(isOpenWater(level, water));
 		LootTable table = level.getServer().reloadableRegistries().getLootTable(BuiltInLootTables.FISHING);
@@ -38,7 +45,14 @@ final class Fishing {
 			.withParameter(LootContextParams.TOOL, new ItemStack(Items.FISHING_ROD))
 			.withParameter(LootContextParams.THIS_ENTITY, bobber)
 			.create(LootContextParamSets.FISHING);
-		table.getRandomItems(params).forEach(stock::addItem);
+		table.getRandomItems(params).stream()
+			.filter(stack -> !isDiscarded(stack))
+			.forEach(stock::addItem);
+	}
+
+	// Enchanted items are treasure even when the junk table has a plain one, like the fishing rod.
+	private static boolean isDiscarded(ItemStack stack) {
+		return stack.is(DISCARDS) && !stack.isEnchanted();
 	}
 
 	/** A water source with air above, where a bobber can float. */

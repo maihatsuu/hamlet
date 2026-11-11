@@ -47,9 +47,17 @@ public final class PriceLoader extends SimpleJsonResourceReloadListener implemen
 		super(new Gson(), "hamlet");
 	}
 
-	/** Every villager's prices. An item missing from here isn't for sale. */
+	/** What an item with no price set sells for, such as modded fishing loot. */
+	public static final int DEFAULT_PRICE = 1;
+
+	/** Every villager's prices; items missing from here sell at {@link #DEFAULT_PRICE}. */
 	public static Map<Item, Integer> prices() {
 		return prices;
+	}
+
+	/** The price of one item in emeralds, from {@code prices}, which is synced to the client with the screen. */
+	public static int priceOf(Map<Item, Integer> prices, Item item) {
+		return prices.getOrDefault(item, DEFAULT_PRICE);
 	}
 
 	public static Map<Item, Integer> wanderingTraderCatalogue() {
