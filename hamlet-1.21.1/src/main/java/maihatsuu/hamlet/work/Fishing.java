@@ -38,7 +38,7 @@ final class Fishing {
 			.withParameter(LootContextParams.TOOL, new ItemStack(Items.FISHING_ROD))
 			.withParameter(LootContextParams.THIS_ENTITY, bobber)
 			.create(LootContextParamSets.FISHING);
-		table.getRandomItems(params).forEach(stock::addItem);
+		table.getRandomItems(params).forEach(stack -> ProfessionWork.store(stock, stack));
 	}
 
 	/** A water source with air above, where a bobber can float. */

@@ -220,27 +220,27 @@ public final class TendAnimals extends Behavior<Villager> {
 			sheep.playSound(SoundEvents.SHEEP_SHEAR, 1.0F, 1.0F);
 			sheep.gameEvent(GameEvent.SHEAR, villager);
 			int count = 1 + level.random.nextInt(3);
-			stock.addItem(new ItemStack(SheepAccessor.hamlet$getItemByDye().get(sheep.getColor()), count));
+			ProfessionWork.store(stock, new ItemStack(SheepAccessor.hamlet$getItemByDye().get(sheep.getColor()), count));
 			return;
 		}
 		// MushroomCow extends Cow, so it has to be checked first.
 		if (animal instanceof MushroomCow) {
 			animal.playSound(SoundEvents.MOOSHROOM_MILK, 1.0F, 1.0F);
-			stock.addItem(new ItemStack(Items.MUSHROOM_STEW));
+			ProfessionWork.store(stock, new ItemStack(Items.MUSHROOM_STEW));
 		} else if (animal instanceof Cow) {
 			animal.playSound(SoundEvents.COW_MILK, 1.0F, 1.0F);
-			stock.addItem(new ItemStack(Items.MILK_BUCKET));
+			ProfessionWork.store(stock, new ItemStack(Items.MILK_BUCKET));
 		} else if (animal instanceof Goat goat) {
 			goat.playSound(goat.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_MILK : SoundEvents.GOAT_MILK, 1.0F, 1.0F);
-			stock.addItem(new ItemStack(Items.MILK_BUCKET));
+			ProfessionWork.store(stock, new ItemStack(Items.MILK_BUCKET));
 		} else if (animal instanceof Armadillo) {
 			// Vanilla's Armadillo.brushOffScute drops the scute on the ground; this stores it instead.
 			animal.playSound(SoundEvents.ARMADILLO_BRUSH, 1.0F, 1.0F);
 			animal.gameEvent(GameEvent.ENTITY_INTERACT, villager);
-			stock.addItem(new ItemStack(Items.ARMADILLO_SCUTE));
+			ProfessionWork.store(stock, new ItemStack(Items.ARMADILLO_SCUTE));
 		} else {
 			animal.playSound(SoundEvents.CHICKEN_EGG, 1.0F, (level.random.nextFloat() - level.random.nextFloat()) * 0.2F + 1.0F);
-			stock.addItem(new ItemStack(Items.EGG));
+			ProfessionWork.store(stock, new ItemStack(Items.EGG));
 		}
 		animal.setAttached(LAST_PRODUCED, now);
 	}

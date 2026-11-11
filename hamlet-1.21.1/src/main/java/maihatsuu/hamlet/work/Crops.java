@@ -6,8 +6,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.AttachedStemBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -29,8 +27,6 @@ import net.minecraft.world.level.block.state.BlockState;
  * </ul>
  */
 final class Crops {
-	/** Harvest byproducts nobody would buy, so farmers throw them away rather than filling their stock. */
-	private static final Set<Item> DISCARDS = Set.of(Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS, Items.POISONOUS_POTATO);
 	private static final Set<Block> COLUMN_PLANTS = Set.of(Blocks.SUGAR_CANE, Blocks.CACTUS, Blocks.BAMBOO);
 	private static final Set<Block> GOURDS = Set.of(Blocks.PUMPKIN, Blocks.MELON);
 
@@ -111,9 +107,8 @@ final class Crops {
 	}
 
 	private static void store(ServerLevel level, BlockPos pos, BlockState state, SimpleContainer stock) {
-		Block.getDrops(state, level, pos, null).stream()
-			.filter(drop -> !DISCARDS.contains(drop.getItem()))
-			.forEach(stock::addItem);
+		// Seeds and poisonous potatoes are thrown away through #hamlet:villager_discards.
+		Block.getDrops(state, level, pos, null).forEach(drop -> ProfessionWork.store(stock, drop));
 	}
 
 	private static boolean hasAttachedStem(ServerLevel level, BlockPos pos) {

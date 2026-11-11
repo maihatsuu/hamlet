@@ -193,11 +193,11 @@ public final class TendHives extends Behavior<Villager> {
 		if (useBottle) {
 			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
 			level.gameEvent(villager, GameEvent.FLUID_PICKUP, pos);
-			stock.addItem(new ItemStack(Items.HONEY_BOTTLE));
+			ProfessionWork.store(stock, new ItemStack(Items.HONEY_BOTTLE));
 		} else {
 			level.playSound(null, pos, SoundEvents.BEEHIVE_SHEAR, SoundSource.BLOCKS, 1.0F, 1.0F);
 			level.gameEvent(villager, GameEvent.SHEAR, pos);
-			stock.addItem(new ItemStack(Items.HONEYCOMB, HONEYCOMB_PER_HIVE));
+			ProfessionWork.store(stock, new ItemStack(Items.HONEYCOMB, HONEYCOMB_PER_HIVE));
 		}
 	}
 

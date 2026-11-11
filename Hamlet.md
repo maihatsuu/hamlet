@@ -28,6 +28,9 @@ Needs to be installed on both server and client (custom trading screen).
   destroyed, whether or not it has been traded with.
 - **No level progression.** Every villager can do everything its profession offers from the start.
 - **Zombie curing doesn't affect prices.**
+- **Discards:** work output in the item tag `#hamlet:villager_discards` is thrown away instead of going
+  into stock, for every profession. It ships with wheat seeds, beetroot seeds and poisonous potatoes;
+  datapacks can add to it to stop villagers gathering anything else, such as fishing junk.
 - **Healing:** villagers slowly regenerate, half a heart every 5 seconds, so occasional damage from
   bad pathfinding doesn't add up.
 - **Zombification:** a villager killed by a zombie always turns into a zombie villager, on every
@@ -46,7 +49,7 @@ Only these professions exist; all others are deprecated.
 
 | Profession | Workstation | Work | Sells / services |
 |---|---|---|---|
-| Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away. | Stock: harvest output. No longer makes bread or shares food. |
+| Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away (see Discards). | Stock: harvest output. No longer makes bread or shares food. |
 | Shepherd | Loom | Spends its work period wandering within 12 blocks of its loom. When an animal is ready, it walks up to it holding the right tool and stores what it gives: wool from sheep (when they have wool), and every 5 minutes milk from cows and goats, mushroom stew from mooshrooms, a scute from armadillos (not while rolled up) and an egg from chickens. | Stock: wool, milk, mushroom stew, armadillo scutes, eggs. |
 | Beekeeper | Smoker | Spends its work period wandering within 12 blocks of its smoker. When a hive or bee nest nearby is full of honey and smoked by a lit campfire below it (vanilla's check for calm bees), it walks over and harvests it, picking at random between shears (3 honeycomb) and a glass bottle (1 honey bottle), as a player would. Unsmoked hives are left alone, so the bees are never angered. Smokers are free because the butcher is retired: a villager that would become a butcher becomes a beekeeper. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores a catch rolled from vanilla's `gameplay/fishing` loot table, the one players use, so mod and datapack changes to fishing loot apply. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
@@ -96,6 +99,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 
 ## Testing
 
+- Add an item to `#hamlet:villager_discards` with a datapack: villagers that produce it stop storing it.
 - Hurt a villager: it heals half a heart every 5 seconds until it's at full health.
 - Right-click any adult villager, including jobless villagers and nitwits: the trading screen opens. Babies refuse.
 - Throw any item near a villager: it picks it up into its storage, not its stock, and stops once storage is full.
