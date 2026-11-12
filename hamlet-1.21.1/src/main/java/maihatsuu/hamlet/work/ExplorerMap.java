@@ -27,26 +27,28 @@ import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
  * <p>
  * Each kind has its own item texture, picked by the {@code hamlet:explorer_map} item property in
  * {@code assets/minecraft/models/item/filled_map.json} from this order: add new kinds at the end, and add
- * their overrides there too.
+ * their overrides there too. Value 10 is vanilla's buried treasure map (see {@code HamletClient}), so a
+ * tenth kind needs the treasure map moved, keeping the overrides in ascending order.
  */
 public enum ExplorerMap {
-	ANCIENT_CITY(hamletTag("on_ancient_city_maps"), "filled_map.hamlet.ancient_city", HamletMapDecorations.ANCIENT_CITY),
-	WOODLAND_MANSION(StructureTags.ON_WOODLAND_EXPLORER_MAPS, "filled_map.mansion", HamletMapDecorations.WOODLAND_MANSION),
-	DESERT_PYRAMID(hamletTag("on_desert_pyramid_maps"), "filled_map.hamlet.desert_pyramid", HamletMapDecorations.DESERT_PYRAMID),
-	OCEAN_MONUMENT(StructureTags.ON_OCEAN_EXPLORER_MAPS, "filled_map.monument", MapDecorationTypes.OCEAN_MONUMENT),
-	TRIAL_CHAMBERS(StructureTags.ON_TRIAL_CHAMBERS_MAPS, "filled_map.trial_chambers", MapDecorationTypes.TRIAL_CHAMBERS),
-	JUNGLE_TEMPLE(hamletTag("on_jungle_temple_maps"), "filled_map.explorer_jungle", MapDecorationTypes.JUNGLE_TEMPLE),
-	SWAMP_HUT(hamletTag("on_swamp_hut_maps"), "filled_map.explorer_swamp", MapDecorationTypes.SWAMP_HUT),
-	MINESHAFT(hamletTag("on_mineshaft_maps"), "filled_map.hamlet.mineshaft", HamletMapDecorations.MINESHAFT),
-	WARM_OCEAN_RUINS(hamletTag("on_warm_ocean_ruins_maps"), "filled_map.hamlet.warm_ocean_ruins", HamletMapDecorations.WARM_OCEAN_RUINS);
+	ANCIENT_CITY(hamletTag("on_ancient_city_maps"), "buried_ancient_city_map", HamletMapDecorations.ANCIENT_CITY),
+	WOODLAND_MANSION(StructureTags.ON_WOODLAND_EXPLORER_MAPS, "woodland_mansion_map", HamletMapDecorations.WOODLAND_MANSION),
+	DESERT_PYRAMID(hamletTag("on_desert_pyramid_maps"), "desert_pyramid_map", HamletMapDecorations.DESERT_PYRAMID),
+	OCEAN_MONUMENT(StructureTags.ON_OCEAN_EXPLORER_MAPS, "ocean_monument_map", MapDecorationTypes.OCEAN_MONUMENT),
+	TRIAL_CHAMBERS(StructureTags.ON_TRIAL_CHAMBERS_MAPS, "buried_trial_chambers_map", MapDecorationTypes.TRIAL_CHAMBERS),
+	JUNGLE_TEMPLE(hamletTag("on_jungle_temple_maps"), "jungle_pyramid_map", MapDecorationTypes.JUNGLE_TEMPLE),
+	SWAMP_HUT(hamletTag("on_swamp_hut_maps"), "swamp_hut_map", MapDecorationTypes.SWAMP_HUT),
+	MINESHAFT(hamletTag("on_mineshaft_maps"), "buried_mineshaft_map", HamletMapDecorations.MINESHAFT),
+	WARM_OCEAN_RUINS(hamletTag("on_warm_ocean_ruins_maps"), "warm_ocean_ruins_map", HamletMapDecorations.WARM_OCEAN_RUINS);
 
 	private final TagKey<Structure> structure;
 	private final String name;
 	private final Holder<MapDecorationType> decoration;
 
-	ExplorerMap(TagKey<Structure> structure, String name, Holder<MapDecorationType> decoration) {
+	/** {@code id} names the map, as {@code filled_map.hamlet.<id>}, and its item texture, {@code hamlet:item/<id>}. */
+	ExplorerMap(TagKey<Structure> structure, String id, Holder<MapDecorationType> decoration) {
 		this.structure = structure;
-		this.name = name;
+		this.name = "filled_map.hamlet." + id;
 		this.decoration = decoration;
 	}
 

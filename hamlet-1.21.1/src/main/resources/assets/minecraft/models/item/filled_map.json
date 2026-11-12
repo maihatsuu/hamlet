@@ -1,8 +1,7 @@
 {
 	"parent": "minecraft:item/generated",
 	"textures": {
-		"layer0": "minecraft:item/filled_map",
-		"layer1": "minecraft:item/filled_map_markings"
+		"layer0": "minecraft:item/filled_map"
 	},
 	"overrides": [
 		{
@@ -58,6 +57,12 @@
 				"hamlet:explorer_map": 0.5625
 			},
 			"model": "hamlet:item/warm_ocean_ruins_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.625
+			},
+			"model": "hamlet:item/buried_treasure_map"
 		}
 	]
 }

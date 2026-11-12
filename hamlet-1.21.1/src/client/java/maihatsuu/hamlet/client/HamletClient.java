@@ -13,6 +13,8 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.npc.Villager;
@@ -28,14 +30,21 @@ public class HamletClient implements ClientModInitializer {
 		registerExplorerMapTextures();
 	}
 
+	/** Vanilla's buried treasure map, from shipwreck and underwater ruin chests, which it names this. */
+	private static final Component BURIED_TREASURE = Component.translatable("filled_map.buried_treasure");
+
 	/**
-	 * Gives each kind of explorer map its own item texture: the property is the kind's index, which the
-	 * overrides in {@code assets/minecraft/models/item/filled_map.json} pick a model from.
+	 * Gives each kind of explorer map its own item texture: the property is the kind's index, or 10 for
+	 * vanilla's buried treasure map, which the overrides in
+	 * {@code assets/minecraft/models/item/filled_map.json} pick a model from.
 	 */
 	private static void registerExplorerMapTextures() {
 		ItemProperties.register(Items.FILLED_MAP, Hamlet.id("explorer_map"), (stack, level, entity, seed) -> {
 			ExplorerMap kind = ExplorerMap.of(stack);
-			return kind == null ? 0.0F : (kind.ordinal() + 1) / 16.0F;
+			if (kind != null) {
+				return (kind.ordinal() + 1) / 16.0F;
+			}
+			return BURIED_TREASURE.equals(stack.get(DataComponents.ITEM_NAME)) ? 10 / 16.0F : 0.0F;
 		});
 	}
 
