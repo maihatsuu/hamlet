@@ -64,9 +64,13 @@ Only these professions exist; all others are deprecated.
 
 Villagers breed when they have enough good food, provided by the player. Farmers no longer supply it.
 
-Villagers pick up any item off the ground into their storage while it has room. Vanilla's breeding
-reads vanilla's inventory, so breeding stays off until Hamlet decides what counts as good food in
-storage.
+Good food is **bread** and **baked potatoes**, read from the villager's storage. Players put it in
+through the trading screen, or throw it and let the villager pick it up (adult villagers pick up any item
+into storage while it has room). Each parent eats 3 when a baby is born, so a pair needs 6 between
+them; vanilla's other foods (raw potatoes, carrots, beetroot) no longer count.
+
+Villagers share: when two meet, one with more than 3 throws a neighbour with fewer what it's missing,
+keeping 3 for itself. So stocking one villager with plenty feeds the village.
 
 ## Emeralds
 
@@ -86,8 +90,6 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - **Stock limits:** does a full inventory stop a villager working? How much can each hold?
 - **Work rates:** how often does each profession produce? (Keeps output from outpacing normal farms.)
   A fisherman on vanilla bite timing makes about 20 catches per working day.
-- **Good food:** players give villagers food by putting it in their storage or throwing it to them.
-  Which foods count, and how much is enough?
 - **Workstations:** decide what happens if a workstation is moved rather than destroyed. Carry On can
   lift lecterns, barrels and similar blocks (Carry On may be removed from the pack anyway). Decorated
   pots also shatter when hit by projectiles, which would cost the villager its job.
@@ -104,7 +106,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Add an item to `#hamlet:villager_discards` with a datapack: villagers that produce it stop storing it.
 - Hurt a villager: it heals half a heart every 5 seconds until it's at full health.
 - Right-click any adult villager, including jobless villagers and nitwits: the trading screen opens. Babies refuse.
-- Throw any item near a villager: it picks it up into its storage, not its stock, and stops once storage is full.
+- Throw any item near a villager: it picks it up into its storage, not its stock, and stops once storage is full. Babies pick up nothing.
 
 - Place and break a workstation: job is gained and lost, with no trading involved.
 - Remove a villager's bed: it stops working, its trade screen says "no bed", it still sells its
@@ -126,6 +128,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Cleric's bottle can't be taken without a level.
 - Cartographer lists each explorer map at 8 emeralds, pointing at the nearest structure.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
-- Breeding works with player food and doesn't happen without it.
+- Two villagers with 3 bread or baked potatoes each in storage, and a free bed, breed and eat them. Raw potatoes, carrots or no food: no breeding.
+- Give one villager 12 bread and leave the others empty: it throws bread to the villagers it meets until each has 3, keeping 3 itself.
 - New villages contain the new houses and no retired ones.
 - Emerald ore rates match diamonds at depth everywhere, and mountains also have veins in their peaks.

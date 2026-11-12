@@ -1,5 +1,7 @@
 package maihatsuu.hamlet.mixin;
 
+import java.util.Map;
+
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 
@@ -18,6 +20,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffers;
 
@@ -143,11 +146,13 @@ abstract class VillagerMixin implements HamletVillager {
 		return false;
 	}
 
-	// Villagers pick up anything that fits in their storage. This covers both pickup paths: Mob.aiStep
-	// checks it before picking up, and the item sensor behind GoToWantedItem filters by it.
+	// Adult villagers pick up anything that fits in their storage. This covers both pickup paths: Mob.aiStep
+	// checks it before picking up, and the item sensor behind GoToWantedItem filters by it. Babies pick up
+	// nothing: their screen doesn't open, so players couldn't get it back.
 	@Inject(method = "wantsToPickUp", at = @At("HEAD"), cancellable = true)
 	private void hamlet$wantsAnything(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-		cir.setReturnValue(this.hamlet$storage.canAddItem(stack));
+		Villager self = (Villager) (Object) this;
+		cir.setReturnValue(!self.isBaby() && this.hamlet$storage.canAddItem(stack));
 	}
 
 	@Inject(method = "pickUpItem", at = @At("HEAD"), cancellable = true)
@@ -165,6 +170,24 @@ abstract class VillagerMixin implements HamletVillager {
 		} else {
 			stack.setCount(rest.getCount());
 		}
+	}
+
+	// Breeding reads food from the inventory vanilla villagers filled by picking up crops. Hamlet villagers
+	// keep what players give them in storage instead, and only eat Hamlet's breeding food.
+	@ModifyExpressionValue(
+		method = {"countFoodPointsInInventory", "eatUntilFull"},
+		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/npc/Villager;getInventory()Lnet/minecraft/world/SimpleContainer;")
+	)
+	private SimpleContainer hamlet$eatFromStorage(SimpleContainer inventory) {
+		return this.hamlet$storage;
+	}
+
+	@ModifyExpressionValue(
+		method = {"countFoodPointsInInventory", "eatUntilFull"},
+		at = @At(value = "FIELD", target = "Lnet/minecraft/world/entity/npc/Villager;FOOD_POINTS:Ljava/util/Map;")
+	)
+	private Map<Item, Integer> hamlet$breedingFood(Map<Item, Integer> vanillaFood) {
+		return HamletVillager.BREEDING_FOOD;
 	}
 
 	@Inject(method = "startTrading", at = @At("HEAD"), cancellable = true)
