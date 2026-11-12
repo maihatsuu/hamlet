@@ -3,7 +3,6 @@ package maihatsuu.hamlet.trade;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -16,20 +15,15 @@ import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Registry;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Inventory;
@@ -90,15 +84,12 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 	private final SimpleContainer payments = new SimpleContainer(2);
 	private final SimpleContainer result = new SimpleContainer(1);
 	private final Map<Item, Integer> prices;
-	private final List<Service> mapServices;
 	/** The template, book or experience service, if the profession has one. */
 	@Nullable
-	private final Service otherService;
+	private final Service service;
 	/** Server only: the offer being paid for. */
 	@Nullable
 	private Offer selected;
-	/** Server only: the map the selected map offer will sell, made once so recomputing doesn't waste map IDs. */
-	private ItemStack pendingMap = ItemStack.EMPTY;
 
 	public VillagerTradeMenu(int containerId, Inventory playerInventory, TradeOpeningData data) {
 		this(containerId, playerInventory, new SimpleContainer(STOCK_SIZE), new SimpleContainer(STORAGE_SIZE),
@@ -119,9 +110,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		this.stock = stock;
 		this.prices = prices;
 		this.villager = villager;
-		List<Service> services = Service.forProfession(profession);
-		this.mapServices = services.stream().filter(service -> service.map != null).toList();
-		this.otherService = services.stream().filter(service -> service.map == null).findFirst().orElse(null);
+		this.service = Service.forProfession(profession);
 		this.payments.addListener(this::slotsChanged);
 
 		for (int slot = 0; slot < STOCK_SIZE; slot++) {
@@ -191,10 +180,10 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		Inventory inventory = this.player.getInventory();
 		int emeralds = inventory.countItem(Items.EMERALD) + this.paymentCount(Items.EMERALD);
 
-		Service other = this.otherService;
+		Service other = this.service;
 		if (other == Service.BOTTLE_EXPERIENCE) {
 			boolean available = emeralds >= other.cost && hasLevelToBottle(this.player);
-			offers.add(new Offer(Offer.Kind.EXPERIENCE, 0, emeralds(other.cost), ItemStack.EMPTY, new ItemStack(Items.EXPERIENCE_BOTTLE),
+			offers.add(new Offer(Offer.Kind.EXPERIENCE, emeralds(other.cost), ItemStack.EMPTY, new ItemStack(Items.EXPERIENCE_BOTTLE),
 				-1, available, Component.translatable("hamlet.service.costs_level"), null));
 		} else if (other != null && other.input != null) {
 			// A row for each kind of template or book the player has, so they choose which to copy.
@@ -209,22 +198,15 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 					continue;
 				}
 				seen.add(stack);
-				offers.add(new Offer(Offer.Kind.COPY, 0, stack.copyWithCount(1), emeralds(other.cost), stack.copyWithCount(1),
+				offers.add(new Offer(Offer.Kind.COPY, stack.copyWithCount(1), emeralds(other.cost), stack.copyWithCount(1),
 					-1, emeralds >= other.cost, null, null));
 			}
 			if (seen.isEmpty()) {
 				boolean template = other == Service.DUPLICATE_TEMPLATE;
 				Component bring = Component.translatable(template ? "hamlet.service.bring_template" : "hamlet.service.bring_enchanted_book");
-				offers.add(new Offer(Offer.Kind.COPY, 0, ItemStack.EMPTY, emeralds(other.cost), ItemStack.EMPTY,
+				offers.add(new Offer(Offer.Kind.COPY, ItemStack.EMPTY, emeralds(other.cost), ItemStack.EMPTY,
 					-1, false, bring, template ? EMPTY_SLOT_TEMPLATE : EMPTY_SLOT_ENCHANTED_BOOK));
 			}
-		}
-
-		for (int index = 0; index < this.mapServices.size(); index++) {
-			Service service = this.mapServices.get(index);
-			ItemStack map = new ItemStack(Items.FILLED_MAP);
-			map.set(DataComponents.ITEM_NAME, Component.translatable(service.map.nameKey()));
-			offers.add(new Offer(Offer.Kind.MAP, index, emeralds(service.cost), ItemStack.EMPTY, map, -1, emeralds >= service.cost, null, null));
 		}
 
 		List<ItemStack> listed = new ArrayList<>();
@@ -236,7 +218,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			listed.add(stack);
 			int price = this.priceOf(stack.getItem());
 			int maxStack = Items.EMERALD.getDefaultMaxStackSize();
-			offers.add(new Offer(Offer.Kind.STOCK, 0, emeralds(Math.min(price, maxStack)),
+			offers.add(new Offer(Offer.Kind.STOCK, emeralds(Math.min(price, maxStack)),
 				price > maxStack ? emeralds(price - maxStack) : ItemStack.EMPTY, stack.copyWithCount(1),
 				this.countInStock(stack), emeralds >= price, null, null));
 		}
@@ -293,13 +275,9 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			}
 		}
 		this.selected = offer;
-		this.pendingMap = ItemStack.EMPTY;
 		if (this.payments.isEmpty()) {
 			this.moveFromInventoryToPayment(0, offer.costA());
 			this.moveFromInventoryToPayment(1, offer.costB());
-		}
-		if (offer.kind() == Offer.Kind.MAP && this.makeMap(offer).isEmpty()) {
-			player.displayClientMessage(Component.translatable("hamlet.service.map_not_charted"), true);
 		}
 		this.updateResult();
 		return true;
@@ -350,7 +328,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 				case EXPERIENCE -> hasLevelToBottle(this.player) ? offer.result().copy() : ItemStack.EMPTY;
 				// The original stays in the payment slot, so this works for books, which don't stack.
 				case COPY -> this.payments.getItem(0).copyWithCount(1);
-				case MAP -> this.makeMap(offer).copy();
 			};
 		}
 		this.result.setItem(0, shown);
@@ -361,7 +338,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		ItemStack first = this.payments.getItem(0);
 		ItemStack second = this.payments.getItem(1);
 		if (offer.kind() == Offer.Kind.COPY) {
-			return this.otherService != null && this.otherService.input != null && this.otherService.input.test(first)
+			return this.service != null && this.service.input != null && this.service.input.test(first)
 				&& second.is(Items.EMERALD) && second.getCount() >= offer.costB().getCount();
 		}
 		return covers(first, offer.costA()) && covers(second, offer.costB());
@@ -378,20 +355,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			}
 		}
 		return -1;
-	}
-
-	/** The map the selected offer sells, charted from the cartography table; empty if it isn't charted yet. */
-	private ItemStack makeMap(Offer offer) {
-		if (this.pendingMap.isEmpty()) {
-			Service service = this.mapServices.get(offer.index());
-			BlockPos from = this.villager.getBrain().getMemory(MemoryModuleType.JOB_SITE)
-				.filter(site -> site.dimension() == this.villager.level().dimension())
-				.map(GlobalPos::pos)
-				.orElse(this.villager.blockPosition());
-			Optional<ItemStack> map = service.map.create((ServerLevel) this.villager.level(), from);
-			this.pendingMap = map.orElse(ItemStack.EMPTY);
-		}
-		return this.pendingMap;
 	}
 
 	/** Takes the payment and anything else the trade costs, once the result has been taken. Server only. */
@@ -412,7 +375,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 				}
 			}
 			case EXPERIENCE -> player.giveExperienceLevels(-1);
-			case MAP -> this.pendingMap = ItemStack.EMPTY;
 			case COPY -> {
 			}
 		}

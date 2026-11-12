@@ -1,7 +1,7 @@
 # Hamlet
 
 A Fabric mod for Minecraft 1.21.1 that overhauls villagers. Villagers do real work, keep what they
-produce in an inventory you can look through, and sell it to you. Many professions also offer
+produce in an inventory you can look through, and sell it to you. Some professions also offer
 services. Levels, trade rerolling and cure discounts are gone.
 
 Needs to be installed on both server and client (custom trading screen).
@@ -55,7 +55,7 @@ Only these professions exist; all others are deprecated.
 | Beekeeper | Smoker | Spends its work period wandering within 12 blocks of its smoker. When a hive or bee nest nearby is full of honey and smoked by a lit campfire below it (vanilla's check for calm bees), it walks over and harvests it, picking at random between shears (3 honeycomb) and a glass bottle (1 honey bottle), as a player would. Unsmoked hives are left alone, so the bees are never angered. Smokers are free because the butcher is retired: a villager that would become a butcher becomes a beekeeper. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores a catch rolled from vanilla's `gameplay/fishing` loot table, the one players use, so mod and datapack changes to fishing loot apply. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
 | Librarian | Lectern | Stays near its lectern during its work period. | Service: copy an enchanted book. Enchanted book + 8 emeralds = 2 enchanted books. Archive tomes to follow, designed together with Archive. |
-| Cartographer | Cartography table | Stays near its cartography table during its work period, and uses its visits to the table to look up nearby structures ahead of time. | Service: an explorer map to the nearest ocean monument, woodland mansion or trial chambers, 8 emeralds each. |
+| Cartographer | Cartography table | Stays near its cartography table during its work period, and draws an explorer map there about every 5 minutes of work, keeping one of each kind in stock: ancient city, woodland mansion, desert pyramid, ocean monument and trial chambers. Each new map points at the nearest structure of its kind that no map points to yet (vanilla's explorer map rule), so a replacement leads somewhere new. A kind with none in range is retried daily and doesn't hold up the others. Ancient cities and desert pyramids have no vanilla explorer map, so Hamlet adds them, with their own map icons and structure tags (`#hamlet:on_ancient_city_maps`, `#hamlet:on_desert_pyramid_maps`). | Stock: explorer maps. |
 | Archaeologist | Decorated pot | | Service: duplicate a smithing template. Template + 1 emerald = 2 templates. Vanilla's duplication recipes are removed. |
 | Cleric | Brewing stand | | Service: bottle your experience. 1 emerald + 1 level = 1 Bottle o' Enchanting. With Archive this is effectively 1:1, so the only cost of storing a level is the emerald. |
 | Wandering Trader | None | | Sells saplings, coral blocks, seeds and tall flowers. |
@@ -126,7 +126,7 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Beekeeper claims a smoker, walks to full hives with a lit campfire under them and harvests them without angering the bees; full hives without a campfire are left alone.
 - Librarian lists a copy row for each enchanted book you carry; selecting one moves the book and 8 emeralds in; the result is a copy, and the original stays in the payment slot.
 - Cleric's bottle can't be taken without a level.
-- Cartographer lists each explorer map at 8 emeralds, pointing at the nearest structure.
+- Cartographer with a bed and table fills its stock over its workday with up to one of each explorer map, each a separate row at 8 emeralds. Buying one makes it draw a replacement, leading to a different structure. With no desert nearby, the other four kinds still appear.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Two villagers with 3 bread or baked potatoes each in storage, and a free bed, breed and eat them. Raw potatoes, carrots or no food: no breeding.
 - Give one villager 12 bread and leave the others empty: it throws bread to the villagers it meets until each has 3, keeping 3 itself.

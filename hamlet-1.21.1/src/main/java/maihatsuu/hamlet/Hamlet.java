@@ -5,6 +5,7 @@ import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.entity.HamletEntities;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletProfessions;
+import maihatsuu.hamlet.work.HamletMapDecorations;
 import maihatsuu.hamlet.work.TendAnimals;
 import maihatsuu.hamlet.worldgen.HamletWorldgen;
 
@@ -30,6 +31,7 @@ public class Hamlet implements ModInitializer {
 		HamletProfessions.init();
 		VillagerTradeMenu.init();
 		HamletEntities.init();
+		HamletMapDecorations.init();
 		TendAnimals.init();
 		HamletWorldgen.init();
 		HamletCommands.register();
