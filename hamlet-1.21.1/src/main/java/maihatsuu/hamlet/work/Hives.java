@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
@@ -57,6 +58,9 @@ final class Hives {
 	/** The nearest ready hive around {@code site} that isn't being skipped. */
 	@Nullable
 	static BlockPos findReadyHive(ServerLevel level, Villager villager, BlockPos site, Map<BlockPos, Long> skip) {
+		if (bothCapped(villager)) {
+			return null;
+		}
 		// Vanilla gives beehives and bee nests separate POI types; searching both avoids scanning every block.
 		return level.getPoiManager()
 			.getInRange(holder -> holder.is(PoiTypes.BEEHIVE) || holder.is(PoiTypes.BEE_NEST), site, APIARY_RADIUS + APIARY_HEIGHT, PoiManager.Occupancy.ANY)
@@ -72,6 +76,27 @@ final class Hives {
 		double dz = center.z - villager.getZ();
 		double dy = hive.getY() - villager.getBlockY();
 		return dx * dx + dz * dz <= REACH_SQR && dy >= -1 && dy <= REACH_UP;
+	}
+
+	/** What a harvest with a bottle or shears gives. */
+	static ItemStack harvestOf(boolean useBottle) {
+		return useBottle ? new ItemStack(Items.HONEY_BOTTLE) : new ItemStack(Items.HONEYCOMB, HONEYCOMB_PER_HIVE);
+	}
+
+	/** Whether harvesting with a bottle (or with shears) would store anything. */
+	static boolean wouldStore(Villager villager, boolean useBottle) {
+		return !ProfessionWork.isCapped(((HamletVillager) villager).hamlet$getStock(), harvestOf(useBottle));
+	}
+
+	/** A bottle or shears, at random, unless the stock is capped on what one of them gives. */
+	static boolean pickBottle(Villager villager, RandomSource random) {
+		boolean bottle = wouldStore(villager, true);
+		boolean shears = wouldStore(villager, false);
+		return bottle && (!shears || random.nextBoolean());
+	}
+
+	private static boolean bothCapped(Villager villager) {
+		return !wouldStore(villager, true) && !wouldStore(villager, false);
 	}
 
 	/** Holds the tool for this harvest while walking to the hive. */
@@ -96,11 +121,11 @@ final class Hives {
 		if (useBottle) {
 			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
 			level.gameEvent(villager, GameEvent.FLUID_PICKUP, pos);
-			ProfessionWork.store(stock, new ItemStack(Items.HONEY_BOTTLE));
+			ProfessionWork.store(stock, harvestOf(true));
 		} else {
 			level.playSound(null, pos, SoundEvents.BEEHIVE_SHEAR, SoundSource.BLOCKS, 1.0F, 1.0F);
 			level.gameEvent(villager, GameEvent.SHEAR, pos);
-			ProfessionWork.store(stock, new ItemStack(Items.HONEYCOMB, HONEYCOMB_PER_HIVE));
+			ProfessionWork.store(stock, harvestOf(false));
 		}
 	}
 

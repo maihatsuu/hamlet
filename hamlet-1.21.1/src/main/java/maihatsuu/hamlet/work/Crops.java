@@ -88,6 +88,15 @@ final class Crops {
 		return true;
 	}
 
+	/**
+	 * Whether harvesting the plant at {@code pos} would store anything, so the farmer leaves a crop ripe in
+	 * the field rather than throwing it away once its stock of that crop is capped.
+	 */
+	static boolean wouldStore(ServerLevel level, BlockPos pos, SimpleContainer stock) {
+		return Block.getDrops(level.getBlockState(pos), level, pos, null).stream()
+			.anyMatch(drop -> !drop.is(ProfessionWork.DISCARDS) && !ProfessionWork.isCapped(stock, drop));
+	}
+
 	private static BlockState regrown(BlockState state) {
 		Block block = state.getBlock();
 		if (block instanceof CropBlock crop) {

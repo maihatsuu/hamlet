@@ -131,7 +131,7 @@ public final class FarmCrops extends Behavior<Villager> {
 		BlockPos target = this.target;
 		if (target != null) {
 			boolean hive = this.targetIsHive;
-			if (hive ? !Hives.isReady(level, target) : !this.isRipe(level, target)) {
+			if (hive ? !Hives.isReady(level, target) || !Hives.wouldStore(villager, this.useBottle) : !this.isRipe(level, target, villager)) {
 				this.dropTarget(villager);
 			} else if (hive ? Hives.canReach(villager, target) : canReach(villager, target)) {
 				if (hive) {
@@ -151,7 +151,7 @@ public final class FarmCrops extends Behavior<Villager> {
 
 		if (time % SCAN_INTERVAL == 0) {
 			this.skipUntil.values().removeIf(until -> until <= time);
-			BlockPos crop = findNearbyCrop(level, villager.blockPosition(), site);
+			BlockPos crop = findNearbyCrop(level, villager, site);
 			if (crop != null) {
 				this.target = crop;
 				this.targetSince = time;
@@ -166,7 +166,7 @@ public final class FarmCrops extends Behavior<Villager> {
 				this.target = hive;
 				this.targetIsHive = true;
 				this.targetSince = time;
-				this.useBottle = level.random.nextBoolean();
+				this.useBottle = Hives.pickBottle(villager, level.random);
 				Hives.holdTool(villager, this.useBottle);
 				brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(hive, this.speed, 1));
 				brain.setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(hive));
@@ -192,14 +192,15 @@ public final class FarmCrops extends Behavior<Villager> {
 	}
 
 	@Nullable
-	private BlockPos findNearbyCrop(ServerLevel level, BlockPos center, BlockPos site) {
+	private BlockPos findNearbyCrop(ServerLevel level, Villager villager, BlockPos site) {
+		BlockPos center = villager.blockPosition();
 		BlockPos nearest = null;
 		double nearestDistance = Double.MAX_VALUE;
 		for (BlockPos pos : BlockPos.betweenClosed(
 			center.offset(-SPOT_RADIUS, -SPOT_HEIGHT, -SPOT_RADIUS),
 			center.offset(SPOT_RADIUS, SPOT_HEIGHT, SPOT_RADIUS)
 		)) {
-			if (!inField(pos, site) || this.skipUntil.containsKey(pos) || !level.isLoaded(pos) || !this.isRipe(level, pos)) {
+			if (!inField(pos, site) || this.skipUntil.containsKey(pos) || !level.isLoaded(pos) || !this.isRipe(level, pos, villager)) {
 				continue;
 			}
 			double distance = pos.distSqr(center);
@@ -220,8 +221,10 @@ public final class FarmCrops extends Behavior<Villager> {
 		this.targetIsHive = false;
 	}
 
-	private boolean isRipe(ServerLevel level, BlockPos pos) {
-		return this.tends.test(level.getBlockState(pos).getBlock()) && Crops.isHarvestable(level, pos);
+	/** Ready to harvest, and its harvest wouldn't all be thrown away for being over the stock cap. */
+	private boolean isRipe(ServerLevel level, BlockPos pos, Villager villager) {
+		return this.tends.test(level.getBlockState(pos).getBlock()) && Crops.isHarvestable(level, pos)
+			&& Crops.wouldStore(level, pos, ((HamletVillager) villager).hamlet$getStock());
 	}
 
 	@Nullable

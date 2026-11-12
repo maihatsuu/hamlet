@@ -35,13 +35,12 @@ import net.minecraft.world.level.block.entity.LecternBlockEntity;
  * <ul>
  *   <li>Cartographer: an explorer map, keeping one of each kind in stock.</li>
  *   <li>Librarian: a copy of the written or enchanted book on its lectern, or a plain book when there's
- *   nothing it can copy.</li>
+ *   nothing it can copy or the copy is capped in stock.</li>
  *   <li>Cleric: a random potion from {@link PriceLoader#clericPotions}.</li>
  *   <li>Mason: faster, a batch of {@link #MASON_BATCH} of a random block from {@link PriceLoader#masonBlocks}
- *   every minute, keeping up to {@link #MASON_CAP} of each block.</li>
+ *   every minute.</li>
  * </ul>
- * Librarians and clerics keep up to {@link #MAX_OF_EACH} of each item, since books and potions don't stack
- * and would otherwise fill the stock with one kind.
+ * Like all work output, each kind of item stops at {@link #capOf its cap}: 3 stacks.
  */
 public final class ProfessionWork extends WorkAtPoi {
 	/** Work time, at the workstation, between items: about 5 minutes. */
@@ -49,15 +48,13 @@ public final class ProfessionWork extends WorkAtPoi {
 	/** The mason's work time between batches: about a minute. */
 	private static final long TICKS_PER_MASON_BATCH = 1200L;
 	private static final int MASON_BATCH = 8;
-	/** How many of each block a mason keeps in stock: 3 stacks. */
-	private static final int MASON_CAP = 3 * 64;
+	/** How many stacks of each kind of item a villager keeps in stock. */
+	private static final int STACKS_PER_ITEM = 3;
 	/**
 	 * Visits come about every 15 seconds while at the workstation, so the time since the last visit counts
 	 * as work up to this much; more means the villager was away from it, or off work.
 	 */
 	private static final long MAX_TICKS_PER_VISIT = 600L;
-	/** How many of each book or potion a librarian or cleric keeps in stock. */
-	private static final int MAX_OF_EACH = 3;
 
 	private final VillagerProfession profession;
 	/** Work time towards the next item. Not saved, so a reload restarts the current one. */
@@ -105,7 +102,8 @@ public final class ProfessionWork extends WorkAtPoi {
 			return drawMap(level, stock, site);
 		}
 		if (this.profession == VillagerProfession.LIBRARIAN) {
-			return storeUnlessCapped(stock, copyBook(level, site));
+			// With the lectern's book capped in stock, it makes plain books instead until some sell.
+			return storeUnlessCapped(stock, copyBook(level, site)) || storeUnlessCapped(stock, new ItemStack(Items.BOOK));
 		}
 		if (this.profession == VillagerProfession.MASON) {
 			return cutBlocks(level, stock);
@@ -138,7 +136,7 @@ public final class ProfessionWork extends WorkAtPoi {
 		List<ItemStack> choices = new ArrayList<>();
 		for (Holder<Potion> potion : PriceLoader.clericPotions()) {
 			ItemStack stack = PotionContents.createItemStack(Items.POTION, potion);
-			if (countInStock(stock, stack) < MAX_OF_EACH) {
+			if (!isCapped(stock, stack)) {
 				choices.add(stack);
 			}
 		}
@@ -150,7 +148,7 @@ public final class ProfessionWork extends WorkAtPoi {
 		List<ItemStack> choices = new ArrayList<>();
 		for (Item block : PriceLoader.masonBlocks()) {
 			ItemStack batch = new ItemStack(block, MASON_BATCH);
-			if (countInStock(stock, batch) < MASON_CAP) {
+			if (!isCapped(stock, batch)) {
 				choices.add(batch);
 			}
 		}
@@ -162,7 +160,7 @@ public final class ProfessionWork extends WorkAtPoi {
 	}
 
 	private static boolean storeUnlessCapped(SimpleContainer stock, ItemStack stack) {
-		if (countInStock(stock, stack) >= MAX_OF_EACH) {
+		if (isCapped(stock, stack)) {
 			return false;
 		}
 		store(stock, stack);
@@ -219,13 +217,34 @@ public final class ProfessionWork extends WorkAtPoi {
 	 * Work output nobody would buy, such as seeds from a harvest: thrown away rather than filling the stock.
 	 * Datapacks can add to it to stop villagers gathering anything else.
 	 */
-	private static final TagKey<Item> DISCARDS = TagKey.create(Registries.ITEM, Hamlet.id("villager_discards"));
+	static final TagKey<Item> DISCARDS = TagKey.create(Registries.ITEM, Hamlet.id("villager_discards"));
 
-	/** Puts work output into the stock, unless it's discarded. All work output goes through here. */
+	/**
+	 * Puts work output into the stock, unless it's discarded, keeping no more than {@link #capOf the cap} of
+	 * each kind; the rest is thrown away. All work output goes through here. Work that can tell in advance,
+	 * such as harvesting, skips capped output instead, so only random output like fishing loot is lost.
+	 */
 	static void store(SimpleContainer stock, ItemStack stack) {
-		if (!stack.is(DISCARDS)) {
-			stock.addItem(stack);
+		if (stack.is(DISCARDS)) {
+			return;
 		}
+		int room = capOf(stack) - countInStock(stock, stack);
+		if (room > 0) {
+			stock.addItem(stack.copyWithCount(Math.min(room, stack.getCount())));
+		}
+	}
+
+	/**
+	 * How much of one kind of item, by item and components, a villager keeps in stock: 3 stacks, so 192
+	 * wheat but 3 milk buckets or potions. Cartographers keep one of each map anyway.
+	 */
+	static int capOf(ItemStack stack) {
+		return STACKS_PER_ITEM * stack.getMaxStackSize();
+	}
+
+	/** Whether the stock already holds the cap of {@code stack}'s kind, so more would be thrown away. */
+	static boolean isCapped(SimpleContainer stock, ItemStack stack) {
+		return countInStock(stock, stack) >= capOf(stack);
 	}
 
 	static boolean isFull(SimpleContainer stock) {

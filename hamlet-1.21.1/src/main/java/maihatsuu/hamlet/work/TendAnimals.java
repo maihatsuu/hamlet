@@ -125,7 +125,7 @@ public final class TendAnimals extends Behavior<Villager> {
 
 		Animal animal = this.target;
 		if (animal != null) {
-			if (!animal.isAlive() || !isReady(animal, time) || !inPasture(animal.blockPosition(), loom)) {
+			if (!animal.isAlive() || !isReady(villager, animal, time) || !inPasture(animal.blockPosition(), loom)) {
 				this.dropTarget(villager);
 			} else if (villager.distanceToSqr(animal) <= REACH_SQR) {
 				tend(level, villager, animal, time);
@@ -179,7 +179,7 @@ public final class TendAnimals extends Behavior<Villager> {
 		AABB pasture = new AABB(loom).inflate(PASTURE_RADIUS, PASTURE_HEIGHT, PASTURE_RADIUS);
 		Animal nearest = null;
 		double nearestDistance = Double.MAX_VALUE;
-		for (Animal animal : level.getEntitiesOfClass(Animal.class, pasture, animal -> isReady(animal, time))) {
+		for (Animal animal : level.getEntitiesOfClass(Animal.class, pasture, animal -> isReady(villager, animal, time))) {
 			if (this.skipUntil.containsKey(animal)) {
 				continue;
 			}
@@ -190,6 +190,28 @@ public final class TendAnimals extends Behavior<Villager> {
 			}
 		}
 		return nearest;
+	}
+
+	/** Ready to give something, and the stock isn't capped on what it gives. */
+	private static boolean isReady(Villager villager, Animal animal, long now) {
+		return isReady(animal, now) && !ProfessionWork.isCapped(((HamletVillager) villager).hamlet$getStock(), productOf(animal));
+	}
+
+	/** One of what the animal gives, to check against the stock cap. */
+	private static ItemStack productOf(Animal animal) {
+		if (animal instanceof Sheep sheep) {
+			return new ItemStack(SheepAccessor.hamlet$getItemByDye().get(sheep.getColor()));
+		}
+		if (animal instanceof MushroomCow) {
+			return new ItemStack(Items.MUSHROOM_STEW);
+		}
+		if (animal instanceof Cow || animal instanceof Goat) {
+			return new ItemStack(Items.MILK_BUCKET);
+		}
+		if (animal instanceof Armadillo) {
+			return new ItemStack(Items.ARMADILLO_SCUTE);
+		}
+		return new ItemStack(Items.EGG);
 	}
 
 	private static boolean isReady(Animal animal, long now) {
