@@ -1,7 +1,5 @@
 {
 	"potions": [
-		"minecraft:healing",
-		"minecraft:regeneration",
 		"minecraft:fire_resistance",
 		"minecraft:night_vision",
 		"minecraft:water_breathing",

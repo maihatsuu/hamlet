@@ -49,17 +49,21 @@ Only these professions exist; all others are deprecated.
 
 | Profession | Workstation | Work | Sells |
 |---|---|---|---|
-| Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away (see Discards). | Stock: harvest output. No longer makes bread or shares food. |
+| Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries and cocoa (reset to their first stage), sugar cane (everything above the bottom block), and pumpkins and melons (only with a stem attached); cactus, bamboo and nether wart are left alone. Seeds and poisonous potatoes are thrown away (see Discards). It also does the retired beekeeper's work: when a hive or bee nest within 12 blocks of its composter (and up to 4 blocks up or down) is full of honey and smoked by a lit campfire below it (vanilla's check for calm bees), it walks over and harvests it, picking at random between shears (3 honeycomb) and a glass bottle (1 honey bottle), as a player would. Unsmoked hives are left alone, so the bees are never angered. | Stock: harvest output, honey bottles, honeycomb. No longer makes bread or shares food. |
 | Shepherd | Loom | Spends its work period wandering within 12 blocks of its loom. When an animal is ready, it walks up to it holding the right tool and stores what it gives: wool from sheep (when they have wool), and every 5 minutes milk from cows and goats, mushroom stew from mooshrooms, a scute from armadillos (not while rolled up) and an egg from chickens. | Stock: wool, milk, mushroom stew, armadillo scutes, eggs. |
-| Beekeeper | Smoker | Spends its work period wandering within 12 blocks of its smoker. When a hive or bee nest nearby is full of honey and smoked by a lit campfire below it (vanilla's check for calm bees), it walks over and harvests it, picking at random between shears (3 honeycomb) and a glass bottle (1 honey bottle), as a player would. Unsmoked hives are left alone, so the bees are never angered. Smokers are free because the butcher is retired: a villager that would become a butcher becomes a beekeeper. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores a catch rolled from vanilla's `gameplay/fishing` loot table, the one players use, so mod and datapack changes to fishing loot apply. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
 | Librarian | Lectern | Stays near its lectern during its work period, and makes a book there about every 5 minutes of work: a copy of the book on its lectern, or a plain book if there's nothing it can copy. It copies enchanted books (which can now be placed on lecterns) and written books, one generation further as vanilla's copying does, so copies of copies can't be copied. Nothing is used up. Keeps up to 3 of each book in stock. | Stock: book copies, plain books. |
 | Cartographer | Cartography table | Stays near its cartography table during its work period, and draws an explorer map there about every 5 minutes of work, of a random kind it doesn't have, keeping one of each kind in stock: ancient city, woodland mansion, desert pyramid, ocean monument, trial chambers, jungle temple, swamp hut, mineshaft and warm ocean ruins. Each new map points at the nearest structure of its kind that no map points to yet (vanilla's explorer map rule), so a replacement leads somewhere new. A kind with none in range is retried daily and doesn't hold up the others. Each kind has its own item texture. Ancient cities, desert pyramids, mineshafts and warm ocean ruins have no vanilla explorer map, so Hamlet adds them, with their own map icons. Those four, plus jungle temples and swamp huts (whose vanilla tags are only filled by an experimental datapack), use Hamlet structure tags: `#hamlet:on_ancient_city_maps`, `#hamlet:on_desert_pyramid_maps`, `#hamlet:on_mineshaft_maps`, `#hamlet:on_warm_ocean_ruins_maps`, `#hamlet:on_jungle_temple_maps`, `#hamlet:on_swamp_hut_maps`. The mansion map also gets Hamlet's own icon. Vanilla's buried treasure map (from shipwreck and underwater ruin chests) gets a matching item texture and X icon. Empty and ordinary filled maps get matching textures too. All of these map textures and icons are backported from a newer Minecraft version, not original art. | Stock: explorer maps. |
-| Cleric | Brewing stand | Stays near its brewing stand during its work period, and brews a potion there about every 5 minutes of work, picked at random from `hamlet/cleric_potions.json` (healing, regeneration, fire resistance, night vision, water breathing, swiftness, leaping and slow falling; datapacks can change it). Keeps up to 3 of each potion in stock. All potions share one price. | Stock: potions. |
+| Cleric | Brewing stand | Stays near its brewing stand during its work period. Whenever fully grown nether wart within 9 blocks of the stand is in sight, it walks over and harvests it, resetting it to its first stage as the farmer does with crops (farmers no longer touch nether wart). It also brews a potion at the stand about every 5 minutes of work, picked at random from `hamlet/cleric_potions.json` (fire resistance, night vision, water breathing, swiftness, leaping and slow falling; datapacks can change it). Keeps up to 3 of each potion in stock. All potions share one price. | Stock: potions, nether wart. |
 | Wandering Trader | None | | Sells saplings, coral blocks, seeds and tall flowers. |
 
-The archaeologist is retired: decorated pots are no longer a workstation, existing archaeologists become
-jobless, and vanilla's smithing template duplication recipes are back.
+Retired professions:
+
+- **Archaeologist:** decorated pots are no longer a workstation, existing archaeologists become jobless, and
+  vanilla's smithing template duplication recipes are back.
+- **Beekeeper:** merged into the farmer. Existing beekeepers become jobless.
+- **Butcher:** smokers are no longer a workstation, and existing butchers become jobless (they used to
+  become beekeepers).
 
 ## Breeding
 
@@ -84,7 +88,7 @@ match:
 ## Villages
 
 Houses for retired professions are removed from village structures and replaced with new hand-made ones,
-including ones for the new professions (so smokers, campfire-smoked beehives and decorated pots actually generate).
+including campfire-smoked beehives near farms.
 
 ## Open questions
 
@@ -123,10 +127,12 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Fisherman walks to the shore, holds a rod, casts a bobber, and each bite adds a catch to its stock.
 - Fisherman only catches treasure near open water.
 - Shepherd walks up to woolly sheep with shears and shears them into its stock; also milks cows and goats, gets stew from mooshrooms, brushes armadillos and gathers eggs.
-- Beekeeper claims a smoker, walks to full hives with a lit campfire under them and harvests them without angering the bees; full hives without a campfire are left alone.
+- Farmer walks to full hives with a lit campfire under them within 12 blocks of its composter and harvests them with shears or a bottle without angering the bees; full hives without a campfire are left alone. It leaves cactus and bamboo alone.
+- Old beekeepers and butchers become jobless, and a jobless villager doesn't take a smoker as a job.
 - An enchanted book can be placed on a lectern; right-clicking the lectern gives it straight back, with no book screen.
 - Librarian with an empty lectern makes plain books, up to 3. With an enchanted book on it, it makes copies, up to 3; with a written original, "Copy of original" copies; with a copy of a copy, plain books.
-- Cleric makes potions from the list, at most 3 of each, all at the potion price.
+- Cleric makes potions from the list (never healing or regeneration), at most 3 of each, all at the potion price.
+- Cleric harvests ripe nether wart within 9 blocks of its brewing stand into its stock, and still brews; a farmer leaves nether wart in its field alone.
 - No villager's offer list has service rows.
 - Cartographer with a bed and table fills its stock over its workday with up to one of each of the nine explorer maps, each a separate row at 8 emeralds with its own item texture. Buying one makes it draw a replacement, leading to a different structure. With no desert nearby, the other four kinds still appear.
 - A buried treasure map from a shipwreck shows Hamlet's item texture and red X.

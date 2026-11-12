@@ -1,7 +1,6 @@
 {
 	"replace": true,
 	"values": [
-		"minecraft:butcher",
 		"minecraft:cartographer",
 		"minecraft:cleric",
 		"minecraft:farmer",

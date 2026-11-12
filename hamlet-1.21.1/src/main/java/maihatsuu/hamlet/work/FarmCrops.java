@@ -3,6 +3,7 @@ package maihatsuu.hamlet.work;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -23,11 +24,19 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.NetherWartBlock;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A farmer's whole work period: wander around the field near its composter, and whenever a fully grown
- * crop is in sight, walk over and harvest just that crop.
+ * Harvesting near a workstation: whenever a fully grown crop it tends is in sight, the villager walks over
+ * and harvests just that crop.
+ * <ul>
+ *   <li>Farmer: its whole work period, wandering the field around its composter between harvests. It tends
+ *   every crop in {@link Crops} except nether wart, and the smoked hives around the field ({@link Hives}).</li>
+ *   <li>Cleric: nether wart around its brewing stand. It doesn't wander: this runs alongside vanilla's
+ *   strolling and workstation visits, which keep it near its stand and brewing.</li>
+ * </ul>
  */
 public final class FarmCrops extends Behavior<Villager> {
 	private static final int FIELD_RADIUS = 9;
@@ -35,7 +44,7 @@ public final class FarmCrops extends Behavior<Villager> {
 	private static final int SPOT_RADIUS = 8;
 	private static final int SPOT_HEIGHT = 2;
 	private static final int SCAN_INTERVAL = 10;
-	/** Horizontal, since melons, cactus and cocoa are solid and cane is harvested from one block up. */
+	/** Horizontal, since melons and cocoa are solid and cane is harvested from one block up. */
 	private static final double HARVEST_REACH_SQR = 1.5 * 1.5;
 	private static final double HARVEST_REACH_UP = 2.5;
 	private static final int HARVEST_PAUSE = 10;
@@ -47,14 +56,30 @@ public final class FarmCrops extends Behavior<Villager> {
 	private static final int RUN_TICKS = 1200;
 
 	private final float speed;
+	private final VillagerProfession profession;
+	private final Predicate<Block> tends;
+	private final boolean patrol;
+	private final boolean tendsHives;
 	@Nullable
 	private BlockPos target;
+	/** Whether the target is a hive rather than a crop. */
+	private boolean targetIsHive;
+	/** For a hive: whether this harvest is with a glass bottle, for honey, rather than shears, for honeycomb. */
+	private boolean useBottle;
 	private long targetSince;
 	private long nextActionTime;
 	/** Crops the farmer couldn't reach, so it doesn't keep walking at them. */
 	private final Map<BlockPos, Long> skipUntil = new HashMap<>();
 
-	public FarmCrops(float speed) {
+	public static FarmCrops farmer(float speed) {
+		return new FarmCrops(speed, VillagerProfession.FARMER, block -> !(block instanceof NetherWartBlock), true, true);
+	}
+
+	public static FarmCrops cleric(float speed) {
+		return new FarmCrops(speed, VillagerProfession.CLERIC, block -> block instanceof NetherWartBlock, false, false);
+	}
+
+	private FarmCrops(float speed, VillagerProfession profession, Predicate<Block> tends, boolean patrol, boolean tendsHives) {
 		super(
 			ImmutableMap.of(
 				MemoryModuleType.JOB_SITE, MemoryStatus.VALUE_PRESENT,
@@ -64,27 +89,31 @@ public final class FarmCrops extends Behavior<Villager> {
 			RUN_TICKS
 		);
 		this.speed = speed;
+		this.profession = profession;
+		this.tends = tends;
+		this.patrol = patrol;
+		this.tendsHives = tendsHives;
 	}
 
 	@Override
 	protected boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-		return canWork(level, villager);
+		return this.canWork(level, villager);
 	}
 
 	@Override
 	protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
 		// The brain keeps ticking a running behaviour after its activity ends, so stop with the work period.
-		return villager.getBrain().isActive(Activity.WORK) && canWork(level, villager);
+		return villager.getBrain().isActive(Activity.WORK) && this.canWork(level, villager);
 	}
 
-	private static boolean canWork(ServerLevel level, Villager villager) {
-		return villager.getVillagerData().getProfession() == VillagerProfession.FARMER
+	private boolean canWork(ServerLevel level, Villager villager) {
+		return villager.getVillagerData().getProfession() == this.profession
 			&& field(level, villager).isPresent()
 			&& WorkRequirements.missing(villager).isEmpty()
 			&& !ProfessionWork.isFull(((HamletVillager) villager).hamlet$getStock());
 	}
 
-	/** The composter, if it's in this dimension. */
+	/** The workstation, if it's in this dimension. */
 	private static Optional<BlockPos> field(ServerLevel level, Villager villager) {
 		return villager.getBrain().getMemory(MemoryModuleType.JOB_SITE)
 			.filter(site -> site.dimension() == level.dimension())
@@ -99,16 +128,22 @@ public final class FarmCrops extends Behavior<Villager> {
 		BlockPos site = field(level, villager).orElseThrow();
 		Brain<Villager> brain = villager.getBrain();
 
-		if (this.target != null) {
-			if (!Crops.isHarvestable(level, this.target)) {
-				this.target = null;
-			} else if (canReach(villager, this.target)) {
-				Crops.harvest(level, this.target, ((HamletVillager) villager).hamlet$getStock());
-				this.target = null;
+		BlockPos target = this.target;
+		if (target != null) {
+			boolean hive = this.targetIsHive;
+			if (hive ? !Hives.isReady(level, target) : !this.isRipe(level, target)) {
+				this.dropTarget(villager);
+			} else if (hive ? Hives.canReach(villager, target) : canReach(villager, target)) {
+				if (hive) {
+					Hives.harvest(level, villager, target, this.useBottle);
+				} else {
+					Crops.harvest(level, target, ((HamletVillager) villager).hamlet$getStock());
+				}
+				this.dropTarget(villager);
 				this.nextActionTime = time + HARVEST_PAUSE;
 			} else if (time - this.targetSince > GIVE_UP_TICKS) {
-				this.skipUntil.put(this.target, time + SKIP_UNREACHABLE_TICKS);
-				this.target = null;
+				this.skipUntil.put(target, time + SKIP_UNREACHABLE_TICKS);
+				this.dropTarget(villager);
 				brain.eraseMemory(MemoryModuleType.WALK_TARGET);
 			}
 			return;
@@ -126,9 +161,20 @@ public final class FarmCrops extends Behavior<Villager> {
 				brain.setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(crop));
 				return;
 			}
+			BlockPos hive = this.tendsHives ? Hives.findReadyHive(level, villager, site, this.skipUntil) : null;
+			if (hive != null) {
+				this.target = hive;
+				this.targetIsHive = true;
+				this.targetSince = time;
+				this.useBottle = level.random.nextBoolean();
+				Hives.holdTool(villager, this.useBottle);
+				brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(hive, this.speed, 1));
+				brain.setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(hive));
+				return;
+			}
 		}
 
-		if (!brain.hasMemoryValue(MemoryModuleType.WALK_TARGET)) {
+		if (this.patrol && !brain.hasMemoryValue(MemoryModuleType.WALK_TARGET)) {
 			BlockPos spot = findWanderSpot(level, site);
 			if (spot != null) {
 				brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(spot, this.speed, 0));
@@ -153,7 +199,7 @@ public final class FarmCrops extends Behavior<Villager> {
 			center.offset(-SPOT_RADIUS, -SPOT_HEIGHT, -SPOT_RADIUS),
 			center.offset(SPOT_RADIUS, SPOT_HEIGHT, SPOT_RADIUS)
 		)) {
-			if (!inField(pos, site) || this.skipUntil.containsKey(pos) || !level.isLoaded(pos) || !Crops.isHarvestable(level, pos)) {
+			if (!inField(pos, site) || this.skipUntil.containsKey(pos) || !level.isLoaded(pos) || !this.isRipe(level, pos)) {
 				continue;
 			}
 			double distance = pos.distSqr(center);
@@ -163,6 +209,19 @@ public final class FarmCrops extends Behavior<Villager> {
 			}
 		}
 		return nearest;
+	}
+
+	/** Forgets the target, and puts away the hive tool if it was a hive. */
+	private void dropTarget(Villager villager) {
+		if (this.targetIsHive) {
+			Hives.putToolAway(villager);
+		}
+		this.target = null;
+		this.targetIsHive = false;
+	}
+
+	private boolean isRipe(ServerLevel level, BlockPos pos) {
+		return this.tends.test(level.getBlockState(pos).getBlock()) && Crops.isHarvestable(level, pos);
 	}
 
 	@Nullable
@@ -197,9 +256,12 @@ public final class FarmCrops extends Behavior<Villager> {
 	@Override
 	protected void stop(ServerLevel level, Villager villager, long time) {
 		Brain<Villager> brain = villager.getBrain();
-		brain.eraseMemory(MemoryModuleType.WALK_TARGET);
-		brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
-		this.target = null;
+		// The cleric shares its walks with vanilla's strolling, so only drop a walk to a crop.
+		if (this.patrol || this.target != null) {
+			brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+			brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+		}
+		this.dropTarget(villager);
 		this.nextActionTime = 0;
 	}
 }

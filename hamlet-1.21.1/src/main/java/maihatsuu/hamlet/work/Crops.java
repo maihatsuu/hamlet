@@ -17,17 +17,17 @@ import net.minecraft.world.level.block.SweetBerryBushBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * What a farmer can harvest, and how. Every harvest leaves the plant able to regrow in place, so the
+ * What farmers and clerics can harvest, and how; {@link FarmCrops} decides which of these each tends. Every harvest leaves the plant able to regrow in place, so the
  * player's layout never changes:
  * <ul>
  *   <li>Crops, cocoa and nether wart: fully grown, reset to age 0.</li>
  *   <li>Sweet berry bushes: fully grown, reset to age 1, like picking them by hand.</li>
- *   <li>Sugar cane, cactus and bamboo: at least 2 tall; everything above the bottom block is taken.</li>
+ *   <li>Sugar cane: at least 2 tall; everything above the bottom block is taken.</li>
  *   <li>Pumpkins and melons: only fruit with a stem attached, so placed pumpkins are left alone.</li>
  * </ul>
  */
 final class Crops {
-	private static final Set<Block> COLUMN_PLANTS = Set.of(Blocks.SUGAR_CANE, Blocks.CACTUS, Blocks.BAMBOO);
+	private static final Set<Block> COLUMN_PLANTS = Set.of(Blocks.SUGAR_CANE);
 	private static final Set<Block> GOURDS = Set.of(Blocks.PUMPKIN, Blocks.MELON);
 
 	private Crops() {

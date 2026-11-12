@@ -6,12 +6,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.datafixers.util.Pair;
 
-import maihatsuu.hamlet.villager.HamletProfessions;
 import maihatsuu.hamlet.work.FarmCrops;
 import maihatsuu.hamlet.work.GoFishing;
 import maihatsuu.hamlet.work.ProfessionWork;
 import maihatsuu.hamlet.work.TendAnimals;
-import maihatsuu.hamlet.work.TendHives;
 
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
@@ -53,7 +51,7 @@ abstract class VillagerGoalPackagesMixin {
 	}
 
 	// Farmers patrol their field and fishermen fish for their whole work period, instead of vanilla's
-	// random mix of strolling and workstation visits.
+	// random mix of strolling and workstation visits. Clerics keep vanilla's mix and also tend nether wart.
 	@ModifyReturnValue(method = "getWorkPackage", at = @At("RETURN"))
 	private static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> hamlet$dedicatedWork(
 		ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> work,
@@ -61,16 +59,20 @@ abstract class VillagerGoalPackagesMixin {
 		float speed
 	) {
 		if (profession == VillagerProfession.FARMER) {
-			return hamlet$workPackage(new FarmCrops(speed));
+			return hamlet$workPackage(FarmCrops.farmer(speed));
+		}
+		if (profession == VillagerProfession.CLERIC) {
+			// Vanilla's work, so it still visits its brewing stand to brew, plus tending nether wart near it.
+			return ImmutableList.<Pair<Integer, ? extends BehaviorControl<? super Villager>>>builder()
+				.addAll(work)
+				.add(Pair.of(5, FarmCrops.cleric(speed)))
+				.build();
 		}
 		if (profession == VillagerProfession.FISHERMAN) {
 			return hamlet$workPackage(new GoFishing(speed));
 		}
 		if (profession == VillagerProfession.SHEPHERD) {
 			return hamlet$workPackage(new TendAnimals(speed));
-		}
-		if (profession == HamletProfessions.BEEKEEPER) {
-			return hamlet$workPackage(new TendHives(speed));
 		}
 		return work;
 	}
