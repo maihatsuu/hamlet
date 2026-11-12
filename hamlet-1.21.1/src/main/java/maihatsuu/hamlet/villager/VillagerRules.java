@@ -12,14 +12,15 @@ public final class VillagerRules {
 		VillagerProfession.LEATHERWORKER,
 		VillagerProfession.MASON,
 		VillagerProfession.TOOLSMITH,
-		VillagerProfession.WEAPONSMITH
+		VillagerProfession.WEAPONSMITH,
+		HamletProfessions.ARCHAEOLOGIST
 	);
 
 	private VillagerRules() {
 	}
 
 	/**
-	 * Villagers have no levels, and retired professions become unemployed, except the butcher: its smoker is
+	 * Villagers have no levels, and retired professions (including Hamlet's archaeologist) become unemployed, except the butcher: its smoker is
 	 * the beekeeper's workstation, so vanilla's assignment (and old saves) hand butchers over to beekeeping.
 	 */
 	public static VillagerData normalize(VillagerData data) {

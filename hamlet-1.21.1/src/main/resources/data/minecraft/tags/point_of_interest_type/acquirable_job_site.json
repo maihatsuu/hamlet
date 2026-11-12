@@ -7,7 +7,6 @@
 		"minecraft:farmer",
 		"minecraft:fisherman",
 		"minecraft:librarian",
-		"minecraft:shepherd",
-		"hamlet:archaeologist"
+		"minecraft:shepherd"
 	]
 }

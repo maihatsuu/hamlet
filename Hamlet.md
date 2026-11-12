@@ -1,8 +1,8 @@
 # Hamlet
 
 A Fabric mod for Minecraft 1.21.1 that overhauls villagers. Villagers do real work, keep what they
-produce in an inventory you can look through, and sell it to you. Some professions also offer
-services. Levels, trade rerolling and cure discounts are gone.
+produce in an inventory you can look through, and sell it to you. There are no services: everything a
+villager sells, it made. Levels, trade rerolling and cure discounts are gone.
 
 Needs to be installed on both server and client (custom trading screen).
 
@@ -14,12 +14,11 @@ Needs to be installed on both server and client (custom trading screen).
   - **Storage** (9 slots): anything players put in, and anything the villager picks up off the ground.
     Players can take it back freely. It's never for sale and doesn't affect work. It drops when the
     villager dies (including turning into a zombie); stock doesn't.
-- **Trading screen:** laid out like vanilla's. On the left, a scrolling list of offers: the
-  profession's services first, then one row for each kind of item in stock. Clicking a row selects it
-  and moves its cost into the two payment slots; the result slot shows what you'll get, and taking it
-  makes the trade (shift-click repeats it while you can pay). On the right: the villager's storage,
-  the payment and result slots, and your inventory. A service that copies an item gets a row for each
-  matching item you carry, so you pick which one.
+- **Trading screen:** laid out like vanilla's. On the left, a scrolling list of offers: one row for
+  each kind of item in stock. Clicking a row selects it and moves its cost into the two payment slots;
+  the result slot shows what you'll get, and taking it makes the trade (shift-click repeats it while
+  you can pay). On the right: the villager's storage, the payment and result slots, and your
+  inventory.
 - **Prices:** one global list, the same for every villager whatever its profession, so changing or
   losing a job doesn't make its stock free. Data-driven: `data/<namespace>/hamlet/prices/*.json`
   files are merged, so mods and datapacks can add their own. The wandering trader's catalogue is
@@ -48,17 +47,19 @@ When a villager isn't working, its trade screen title says why (e.g. "Not workin
 
 Only these professions exist; all others are deprecated.
 
-| Profession | Workstation | Work | Sells / services |
+| Profession | Workstation | Work | Sells |
 |---|---|---|---|
 | Farmer | Composter | Spends its work period patrolling within 9 blocks of its composter. Whenever it spots a fully grown crop, it walks over and harvests just that crop, leaving it to regrow in place, so layouts stay exactly as the player planted them. No seed cost. Harvests crops, sweet berries, cocoa and nether wart (reset to their first stage), sugar cane, cactus and bamboo (everything above the bottom block), and pumpkins and melons (only with a stem attached). Seeds and poisonous potatoes are thrown away (see Discards). | Stock: harvest output. No longer makes bread or shares food. |
 | Shepherd | Loom | Spends its work period wandering within 12 blocks of its loom. When an animal is ready, it walks up to it holding the right tool and stores what it gives: wool from sheep (when they have wool), and every 5 minutes milk from cows and goats, mushroom stew from mooshrooms, a scute from armadillos (not while rolled up) and an egg from chickens. | Stock: wool, milk, mushroom stew, armadillo scutes, eggs. |
 | Beekeeper | Smoker | Spends its work period wandering within 12 blocks of its smoker. When a hive or bee nest nearby is full of honey and smoked by a lit campfire below it (vanilla's check for calm bees), it walks over and harvests it, picking at random between shears (3 honeycomb) and a glass bottle (1 honey bottle), as a player would. Unsmoked hives are left alone, so the bees are never angered. Smokers are free because the butcher is retired: a villager that would become a butcher becomes a beekeeper. | Stock: honey bottles, honeycomb. |
 | Fisherman | Barrel | Spends its work period at the shore of water within 9 blocks of its barrel. Casts a bobber 2 to 5 blocks out, waits for a bite (vanilla's 5 to 30 seconds), and stores a catch rolled from vanilla's `gameplay/fishing` loot table, the one players use, so mod and datapack changes to fishing loot apply. Treasure catches need open water around the bobber (vanilla's open-water check). | Stock: everything it catches, including treasure. |
-| Librarian | Lectern | Stays near its lectern during its work period. | Service: copy an enchanted book. Enchanted book + 8 emeralds = 2 enchanted books. Archive tomes to follow, designed together with Archive. |
+| Librarian | Lectern | Stays near its lectern during its work period, and makes a book there about every 5 minutes of work: a copy of the book on its lectern, or a plain book if there's nothing it can copy. It copies enchanted books (which can now be placed on lecterns) and written books, one generation further as vanilla's copying does, so copies of copies can't be copied. Nothing is used up. Keeps up to 3 of each book in stock. | Stock: book copies, plain books. |
 | Cartographer | Cartography table | Stays near its cartography table during its work period, and draws an explorer map there about every 5 minutes of work, of a random kind it doesn't have, keeping one of each kind in stock: ancient city, woodland mansion, desert pyramid, ocean monument, trial chambers, jungle temple, swamp hut, mineshaft and warm ocean ruins. Each new map points at the nearest structure of its kind that no map points to yet (vanilla's explorer map rule), so a replacement leads somewhere new. A kind with none in range is retried daily and doesn't hold up the others. Each kind has its own item texture. Ancient cities, desert pyramids, mineshafts and warm ocean ruins have no vanilla explorer map, so Hamlet adds them, with their own map icons. Those four, plus jungle temples and swamp huts (whose vanilla tags are only filled by an experimental datapack), use Hamlet structure tags: `#hamlet:on_ancient_city_maps`, `#hamlet:on_desert_pyramid_maps`, `#hamlet:on_mineshaft_maps`, `#hamlet:on_warm_ocean_ruins_maps`, `#hamlet:on_jungle_temple_maps`, `#hamlet:on_swamp_hut_maps`. The mansion map also gets Hamlet's own icon. Vanilla's buried treasure map (from shipwreck and underwater ruin chests) gets a matching item texture and X icon. Empty and ordinary filled maps get matching textures too. All of these map textures and icons are backported from a newer Minecraft version, not original art. | Stock: explorer maps. |
-| Archaeologist | Decorated pot | | Service: duplicate a smithing template. Template + 1 emerald = 2 templates. Vanilla's duplication recipes are removed. |
-| Cleric | Brewing stand | | Service: bottle your experience. 1 emerald + 1 level = 1 Bottle o' Enchanting. With Archive this is effectively 1:1, so the only cost of storing a level is the emerald. |
+| Cleric | Brewing stand | Stays near its brewing stand during its work period, and brews a potion there about every 5 minutes of work, picked at random from `hamlet/cleric_potions.json` (healing, regeneration, fire resistance, night vision, water breathing, swiftness, leaping and slow falling; datapacks can change it). Keeps up to 3 of each potion in stock. All potions share one price. | Stock: potions. |
 | Wandering Trader | None | | Sells saplings, coral blocks, seeds and tall flowers. |
+
+The archaeologist is retired: decorated pots are no longer a workstation, existing archaeologists become
+jobless, and vanilla's smithing template duplication recipes are back.
 
 ## Breeding
 
@@ -118,14 +119,15 @@ including ones for the new professions (so smokers, campfire-smoked beehives and
 - Farmer patrols its field, harvests mature crops one at a time, and leaves a mixed crop layout
   unchanged. Crops more than 9 blocks from its composter are left alone.
 - Villagers ignore items dropped on the ground.
-- Cleric takes exactly 1 level and 1 emerald per bottle. Archaeologist returns 2 templates, and the
-  crafting recipe is gone.
+- Decorated pots give no job, and an old archaeologist becomes jobless. A template, 7 diamonds and its base material craft 2 templates.
 - Fisherman walks to the shore, holds a rod, casts a bobber, and each bite adds a catch to its stock.
 - Fisherman only catches treasure near open water.
 - Shepherd walks up to woolly sheep with shears and shears them into its stock; also milks cows and goats, gets stew from mooshrooms, brushes armadillos and gathers eggs.
 - Beekeeper claims a smoker, walks to full hives with a lit campfire under them and harvests them without angering the bees; full hives without a campfire are left alone.
-- Librarian lists a copy row for each enchanted book you carry; selecting one moves the book and 8 emeralds in; the result is a copy, and the original stays in the payment slot.
-- Cleric's bottle can't be taken without a level.
+- An enchanted book can be placed on a lectern; right-clicking the lectern gives it straight back, with no book screen.
+- Librarian with an empty lectern makes plain books, up to 3. With an enchanted book on it, it makes copies, up to 3; with a written original, "Copy of original" copies; with a copy of a copy, plain books.
+- Cleric makes potions from the list, at most 3 of each, all at the potion price.
+- No villager's offer list has service rows.
 - Cartographer with a bed and table fills its stock over its workday with up to one of each of the nine explorer maps, each a separate row at 8 emeralds with its own item texture. Buying one makes it draw a replacement, leading to a different structure. With no desert nearby, the other four kinds still appear.
 - A buried treasure map from a shipwreck shows Hamlet's item texture and red X.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.

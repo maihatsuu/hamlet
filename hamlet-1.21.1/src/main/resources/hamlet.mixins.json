@@ -4,6 +4,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"FishingHookPredicateMixin",
+		"LecternBlockMixin",
 		"SheepAccessor",
 		"TradeWithVillagerMixin",
 		"VillagerGoalPackagesMixin",

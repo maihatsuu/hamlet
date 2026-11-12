@@ -21,7 +21,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -36,8 +35,6 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 	private static final ResourceLocation SCROLLER_DISABLED_SPRITE = ResourceLocation.withDefaultNamespace("container/villager/scroller_disabled");
 	private static final ResourceLocation TRADE_ARROW_SPRITE = ResourceLocation.withDefaultNamespace("container/villager/trade_arrow");
 	private static final ResourceLocation TRADE_ARROW_UNAVAILABLE_SPRITE = ResourceLocation.withDefaultNamespace("container/villager/trade_arrow_out_of_stock");
-	private static final ResourceLocation LEVEL_SPRITE = ResourceLocation.withDefaultNamespace("container/enchanting_table/level_1");
-	private static final ResourceLocation LEVEL_DISABLED_SPRITE = ResourceLocation.withDefaultNamespace("container/enchanting_table/level_1_disabled");
 	private static final Component TRADES_LABEL = Component.translatable("merchant.trades");
 
 	// The same layout numbers as vanilla's MerchantScreen.
@@ -96,7 +93,7 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 
 	private void onRowPressed(int index) {
 		int row = index + this.scrollOff;
-		if (row >= this.rows.size() || !this.rows.get(row).selectable()) {
+		if (row >= this.rows.size()) {
 			return;
 		}
 		this.selected = this.rows.get(row);
@@ -146,16 +143,8 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 		int x = this.leftPos + ROW_X;
 		graphics.pose().pushPose();
 		graphics.pose().translate(0.0F, 0.0F, 100.0F);
-		if (row.hintSprite() != null) {
-			graphics.blit(x + COST_A_X, y, 0, 16, 16, this.minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(row.hintSprite()));
-		}
 		this.renderItem(graphics, row.costA(), x + COST_A_X, y);
 		this.renderItem(graphics, row.costB(), x + COST_B_X, y);
-		if (row.kind() == Offer.Kind.EXPERIENCE) {
-			// The level it costs, drawn as the enchanting table draws it.
-			boolean hasLevel = VillagerTradeMenu.hasLevelToBottle(this.minecraft.player);
-			graphics.blitSprite(hasLevel ? LEVEL_SPRITE : LEVEL_DISABLED_SPRITE, x + COST_B_X, y, 16, 16);
-		}
 		RenderSystem.enableBlend();
 		graphics.blitSprite(row.available() ? TRADE_ARROW_SPRITE : TRADE_ARROW_UNAVAILABLE_SPRITE, x + ARROW_X, y + 3, 0, 10, 9);
 		this.renderItem(graphics, row.result(), x + RESULT_X, y);
@@ -249,11 +238,8 @@ public class VillagerTradeScreen extends AbstractContainerScreen<VillagerTradeMe
 			if (!hovered.isEmpty()) {
 				lines.addAll(Screen.getTooltipFromItem(VillagerTradeScreen.this.minecraft, hovered));
 			}
-			if (hovered == row.result() && row.inStock() >= 0) {
+			if (hovered == row.result()) {
 				lines.add(Component.translatable("hamlet.trade.in_stock", row.inStock()).withStyle(ChatFormatting.GRAY));
-			}
-			if (row.note() != null && (hovered.isEmpty() || hovered == row.result())) {
-				lines.add(row.note().copy().withStyle(ChatFormatting.GRAY));
 			}
 			if (!lines.isEmpty()) {
 				graphics.renderComponentTooltip(VillagerTradeScreen.this.font, lines, mouseX, mouseY);

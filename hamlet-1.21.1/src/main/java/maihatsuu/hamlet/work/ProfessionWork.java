@@ -5,11 +5,14 @@ import java.util.List;
 import java.util.Optional;
 
 import maihatsuu.hamlet.Hamlet;
+import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
 
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
@@ -20,23 +23,37 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.block.entity.LecternBlockEntity;
 
 /**
  * Vanilla's walk-to-workstation behaviour, for professions that don't have their own work behaviour. It skips
- * vanilla's restocking. Most of these professions offer services and produce nothing here; the cartographer
- * draws explorer maps at its table, keeping one of each kind in its stock.
+ * vanilla's restocking. While working at its workstation, a villager makes one item about every 5 minutes:
+ * <ul>
+ *   <li>Cartographer: an explorer map, keeping one of each kind in stock.</li>
+ *   <li>Librarian: a copy of the written or enchanted book on its lectern, or a plain book when there's
+ *   nothing it can copy.</li>
+ *   <li>Cleric: a random potion from {@link PriceLoader#clericPotions}.</li>
+ * </ul>
+ * Librarians and clerics keep up to {@link #MAX_OF_EACH} of each item, since books and potions don't stack
+ * and would otherwise fill the stock with one kind.
  */
 public final class ProfessionWork extends WorkAtPoi {
-	/** Work time, at the table, between maps: about 5 minutes. */
-	private static final long TICKS_PER_MAP = 6000L;
+	/** Work time, at the workstation, between items: about 5 minutes. */
+	private static final long TICKS_PER_ITEM = 6000L;
 	/**
-	 * Visits come about every 15 seconds while at the table, so the time since the last visit counts as
-	 * work up to this much; more means the villager was away from it, or off work.
+	 * Visits come about every 15 seconds while at the workstation, so the time since the last visit counts
+	 * as work up to this much; more means the villager was away from it, or off work.
 	 */
 	private static final long MAX_TICKS_PER_VISIT = 600L;
+	/** How many of each book or potion a librarian or cleric keeps in stock. */
+	private static final int MAX_OF_EACH = 3;
 
 	private final VillagerProfession profession;
-	/** Cartographer: work time towards the next map. Not saved, so a reload restarts the current map. */
+	/** Work time towards the next item. Not saved, so a reload restarts the current one. */
 	private long workTicks;
 	private long lastVisit = Long.MIN_VALUE / 2;
 
@@ -46,22 +63,94 @@ public final class ProfessionWork extends WorkAtPoi {
 
 	@Override
 	protected void useWorkstation(ServerLevel level, Villager villager) {
-		if (this.profession != VillagerProfession.CARTOGRAPHER || WorkRequirements.missing(villager).isPresent()) {
+		if (!makesItems(this.profession) || WorkRequirements.missing(villager).isPresent()) {
 			return;
 		}
 		long now = level.getGameTime();
 		this.workTicks += Math.max(0L, Math.min(now - this.lastVisit, MAX_TICKS_PER_VISIT));
 		this.lastVisit = now;
-		if (this.workTicks < TICKS_PER_MAP) {
+		if (this.workTicks < TICKS_PER_ITEM) {
+			return;
+		}
+		SimpleContainer stock = ((HamletVillager) villager).hamlet$getStock();
+		if (isFull(stock)) {
 			return;
 		}
 		villager.getBrain().getMemory(MemoryModuleType.JOB_SITE)
 			.filter(site -> site.dimension() == level.dimension())
 			.ifPresent(site -> {
-				if (drawMap(level, ((HamletVillager) villager).hamlet$getStock(), site.pos())) {
+				if (this.produce(level, stock, site.pos())) {
 					this.workTicks = 0L;
 				}
 			});
+	}
+
+	private static boolean makesItems(VillagerProfession profession) {
+		return profession == VillagerProfession.CARTOGRAPHER
+			|| profession == VillagerProfession.LIBRARIAN
+			|| profession == VillagerProfession.CLERIC;
+	}
+
+	/** Makes one item into the stock, if there's one to make now. */
+	private boolean produce(ServerLevel level, SimpleContainer stock, BlockPos site) {
+		if (this.profession == VillagerProfession.CARTOGRAPHER) {
+			return drawMap(level, stock, site);
+		}
+		if (this.profession == VillagerProfession.LIBRARIAN) {
+			return storeUnlessCapped(stock, copyBook(level, site));
+		}
+		return brewPotion(level, stock);
+	}
+
+	/**
+	 * What a librarian makes at its lectern: a copy of an enchanted book on it, a copy of a written book that
+	 * can still be copied (one generation further, as vanilla's copying does; copies of copies can't be), or
+	 * otherwise a plain book.
+	 */
+	private static ItemStack copyBook(ServerLevel level, BlockPos site) {
+		ItemStack book = level.getBlockEntity(site) instanceof LecternBlockEntity lectern ? lectern.getBook() : ItemStack.EMPTY;
+		if (book.is(Items.ENCHANTED_BOOK)) {
+			return book.copyWithCount(1);
+		}
+		WrittenBookContent content = book.is(Items.WRITTEN_BOOK) ? book.get(DataComponents.WRITTEN_BOOK_CONTENT) : null;
+		WrittenBookContent copied = content == null ? null : content.tryCraftCopy();
+		if (copied != null) {
+			ItemStack copy = book.copyWithCount(1);
+			copy.set(DataComponents.WRITTEN_BOOK_CONTENT, copied);
+			return copy;
+		}
+		return new ItemStack(Items.BOOK);
+	}
+
+	/** A random potion from the cleric's list that the stock doesn't already have enough of. */
+	private static boolean brewPotion(ServerLevel level, SimpleContainer stock) {
+		List<ItemStack> choices = new ArrayList<>();
+		for (Holder<Potion> potion : PriceLoader.clericPotions()) {
+			ItemStack stack = PotionContents.createItemStack(Items.POTION, potion);
+			if (countInStock(stock, stack) < MAX_OF_EACH) {
+				choices.add(stack);
+			}
+		}
+		return !choices.isEmpty() && storeUnlessCapped(stock, Util.getRandom(choices, level.random));
+	}
+
+	private static boolean storeUnlessCapped(SimpleContainer stock, ItemStack stack) {
+		if (countInStock(stock, stack) >= MAX_OF_EACH) {
+			return false;
+		}
+		store(stock, stack);
+		return true;
+	}
+
+	private static int countInStock(SimpleContainer stock, ItemStack kind) {
+		int count = 0;
+		for (int slot = 0; slot < stock.getContainerSize(); slot++) {
+			ItemStack stack = stock.getItem(slot);
+			if (ItemStack.isSameItemSameComponents(stack, kind)) {
+				count += stack.getCount();
+			}
+		}
+		return count;
 	}
 
 	/**
@@ -73,9 +162,6 @@ public final class ProfessionWork extends WorkAtPoi {
 	 * recently found nothing.
 	 */
 	private static boolean drawMap(ServerLevel level, SimpleContainer stock, BlockPos from) {
-		if (isFull(stock)) {
-			return false;
-		}
 		List<ExplorerMap> missing = new ArrayList<>();
 		for (ExplorerMap kind : ExplorerMap.values()) {
 			if (!inStock(stock, kind)) {

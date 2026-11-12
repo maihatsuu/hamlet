@@ -18,14 +18,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -47,8 +45,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 	public static final int STOCK_SIZE = HamletVillager.STOCK_SIZE;
 	public static final int STORAGE_SIZE = HamletVillager.STORAGE_SIZE;
 	private static final double MAX_DISTANCE_SQR = 64.0;
-	private static final ResourceLocation EMPTY_SLOT_TEMPLATE = ResourceLocation.withDefaultNamespace("item/empty_slot_smithing_template_armor_trim");
-	private static final ResourceLocation EMPTY_SLOT_ENCHANTED_BOOK = Hamlet.id("item/empty_slot_enchanted_book");
 
 	// Slot indices.
 	private static final int STORAGE_START = STOCK_SIZE;
@@ -84,16 +80,13 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 	private final SimpleContainer payments = new SimpleContainer(2);
 	private final SimpleContainer result = new SimpleContainer(1);
 	private final Map<Item, Integer> prices;
-	/** The template, book or experience service, if the profession has one. */
-	@Nullable
-	private final Service service;
 	/** Server only: the offer being paid for. */
 	@Nullable
 	private Offer selected;
 
 	public VillagerTradeMenu(int containerId, Inventory playerInventory, TradeOpeningData data) {
 		this(containerId, playerInventory, new SimpleContainer(STOCK_SIZE), new SimpleContainer(STORAGE_SIZE),
-			data.prices(), data.profession(), null);
+			data.prices(), null);
 	}
 
 	private VillagerTradeMenu(
@@ -102,7 +95,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		SimpleContainer stock,
 		SimpleContainer storage,
 		Map<Item, Integer> prices,
-		VillagerProfession profession,
 		@Nullable Villager villager
 	) {
 		super(TYPE, containerId);
@@ -110,7 +102,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		this.stock = stock;
 		this.prices = prices;
 		this.villager = villager;
-		this.service = Service.forProfession(profession);
 		this.payments.addListener(this::slotsChanged);
 
 		for (int slot = 0; slot < STOCK_SIZE; slot++) {
@@ -138,13 +129,12 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 
 	/** Claims the villager for this player and opens the screen. */
 	public static void open(Villager villager, Player player) {
-		VillagerProfession profession = villager.getVillagerData().getProfession();
 		Map<Item, Integer> prices = PriceLoader.prices();
 		villager.setTradingPlayer(player);
 		player.openMenu(new ExtendedScreenHandlerFactory<TradeOpeningData>() {
 			@Override
 			public TradeOpeningData getScreenOpeningData(ServerPlayer serverPlayer) {
-				return new TradeOpeningData(prices, profession);
+				return new TradeOpeningData(prices);
 			}
 
 			@Override
@@ -162,7 +152,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player menuPlayer) {
 				HamletVillager hamlet = (HamletVillager) villager;
 				return new VillagerTradeMenu(containerId, inventory, hamlet.hamlet$getStock(), hamlet.hamlet$getStorage(),
-					prices, profession, villager);
+					prices, villager);
 			}
 		});
 	}
@@ -172,42 +162,12 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 	}
 
 	/**
-	 * Every offer, services first, then one row per kind of item in stock. Items in the payment slots count
-	 * as the player's, so selecting an offer (which moves its cost there) doesn't change the list.
+	 * Every offer: one row per kind of item in stock. Emeralds in the payment slots count as the player's, so
+	 * selecting an offer (which moves its cost there) doesn't change the list.
 	 */
 	public List<Offer> offers() {
 		List<Offer> offers = new ArrayList<>();
-		Inventory inventory = this.player.getInventory();
-		int emeralds = inventory.countItem(Items.EMERALD) + this.paymentCount(Items.EMERALD);
-
-		Service other = this.service;
-		if (other == Service.BOTTLE_EXPERIENCE) {
-			boolean available = emeralds >= other.cost && hasLevelToBottle(this.player);
-			offers.add(new Offer(Offer.Kind.EXPERIENCE, emeralds(other.cost), ItemStack.EMPTY, new ItemStack(Items.EXPERIENCE_BOTTLE),
-				-1, available, Component.translatable("hamlet.service.costs_level"), null));
-		} else if (other != null && other.input != null) {
-			// A row for each kind of template or book the player has, so they choose which to copy.
-			List<ItemStack> candidates = new ArrayList<>();
-			candidates.add(this.payments.getItem(0));
-			for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
-				candidates.add(inventory.getItem(slot));
-			}
-			List<ItemStack> seen = new ArrayList<>();
-			for (ItemStack stack : candidates) {
-				if (!other.input.test(stack) || seen.stream().anyMatch(s -> ItemStack.isSameItemSameComponents(s, stack))) {
-					continue;
-				}
-				seen.add(stack);
-				offers.add(new Offer(Offer.Kind.COPY, stack.copyWithCount(1), emeralds(other.cost), stack.copyWithCount(1),
-					-1, emeralds >= other.cost, null, null));
-			}
-			if (seen.isEmpty()) {
-				boolean template = other == Service.DUPLICATE_TEMPLATE;
-				Component bring = Component.translatable(template ? "hamlet.service.bring_template" : "hamlet.service.bring_enchanted_book");
-				offers.add(new Offer(Offer.Kind.COPY, ItemStack.EMPTY, emeralds(other.cost), ItemStack.EMPTY,
-					-1, false, bring, template ? EMPTY_SLOT_TEMPLATE : EMPTY_SLOT_ENCHANTED_BOOK));
-			}
-		}
+		int emeralds = this.player.getInventory().countItem(Items.EMERALD) + this.paymentCount(Items.EMERALD);
 
 		List<ItemStack> listed = new ArrayList<>();
 		for (int slot = 0; slot < this.stock.getContainerSize(); slot++) {
@@ -218,9 +178,9 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			listed.add(stack);
 			int price = this.priceOf(stack.getItem());
 			int maxStack = Items.EMERALD.getDefaultMaxStackSize();
-			offers.add(new Offer(Offer.Kind.STOCK, emeralds(Math.min(price, maxStack)),
+			offers.add(new Offer(emeralds(Math.min(price, maxStack)),
 				price > maxStack ? emeralds(price - maxStack) : ItemStack.EMPTY, stack.copyWithCount(1),
-				this.countInStock(stack), emeralds >= price, null, null));
+				this.countInStock(stack), emeralds >= price));
 		}
 		return offers;
 	}
@@ -251,10 +211,6 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		return new ItemStack(Items.EMERALD, count);
 	}
 
-	public static boolean hasLevelToBottle(Player player) {
-		return player.experienceLevel >= 1 || player.getAbilities().instabuild;
-	}
-
 	/** Selects the offer at that row: the old payment goes back to the player, and the new cost comes out. */
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
@@ -262,7 +218,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 			return false;
 		}
 		List<Offer> offers = this.offers();
-		if (id < 0 || id >= offers.size() || !offers.get(id).selectable()) {
+		if (id < 0 || id >= offers.size()) {
 			return false;
 		}
 		Offer offer = offers.get(id);
@@ -323,25 +279,14 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		Offer offer = this.selected;
 		ItemStack shown = ItemStack.EMPTY;
 		if (offer != null && this.isPaid(offer)) {
-			shown = switch (offer.kind()) {
-				case STOCK -> this.stockSlotOf(offer.result()) >= 0 ? offer.result().copy() : ItemStack.EMPTY;
-				case EXPERIENCE -> hasLevelToBottle(this.player) ? offer.result().copy() : ItemStack.EMPTY;
-				// The original stays in the payment slot, so this works for books, which don't stack.
-				case COPY -> this.payments.getItem(0).copyWithCount(1);
-			};
+			shown = this.stockSlotOf(offer.result()) >= 0 ? offer.result().copy() : ItemStack.EMPTY;
 		}
 		this.result.setItem(0, shown);
 	}
 
-	/** Whether the payment slots hold the cost. A copy takes any book or template the service accepts. */
+	/** Whether the payment slots hold the cost. */
 	private boolean isPaid(Offer offer) {
-		ItemStack first = this.payments.getItem(0);
-		ItemStack second = this.payments.getItem(1);
-		if (offer.kind() == Offer.Kind.COPY) {
-			return this.service != null && this.service.input != null && this.service.input.test(first)
-				&& second.is(Items.EMERALD) && second.getCount() >= offer.costB().getCount();
-		}
-		return covers(first, offer.costA()) && covers(second, offer.costB());
+		return covers(this.payments.getItem(0), offer.costA()) && covers(this.payments.getItem(1), offer.costB());
 	}
 
 	private static boolean covers(ItemStack payment, ItemStack cost) {
@@ -363,20 +308,11 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		if (offer == null || this.villager == null) {
 			return;
 		}
-		if (offer.kind() != Offer.Kind.COPY) {
-			this.payments.getItem(0).shrink(offer.costA().getCount());
-		}
+		this.payments.getItem(0).shrink(offer.costA().getCount());
 		this.payments.getItem(1).shrink(offer.costB().getCount());
-		switch (offer.kind()) {
-			case STOCK -> {
-				int slot = this.stockSlotOf(offer.result());
-				if (slot >= 0) {
-					this.stock.removeItem(slot, 1);
-				}
-			}
-			case EXPERIENCE -> player.giveExperienceLevels(-1);
-			case COPY -> {
-			}
+		int slot = this.stockSlotOf(offer.result());
+		if (slot >= 0) {
+			this.stock.removeItem(slot, 1);
 		}
 		player.awardStat(Stats.TRADED_WITH_VILLAGER);
 		this.villager.playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
