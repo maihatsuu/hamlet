@@ -8,6 +8,7 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
+import maihatsuu.hamlet.work.TendAnimals;
 import maihatsuu.hamlet.villager.VillagerRules;
 
 import net.minecraft.nbt.CompoundTag;
@@ -146,13 +147,16 @@ abstract class VillagerMixin implements HamletVillager {
 		return false;
 	}
 
-	// Adult villagers pick up anything that fits in their storage. This covers both pickup paths: Mob.aiStep
-	// checks it before picking up, and the item sensor behind GoToWantedItem filters by it. Babies pick up
-	// nothing: their screen doesn't open, so players couldn't get it back.
+	// Adult villagers pick up breeding food, and shepherds their animals' feed, while it fits in storage;
+	// anything else has to go in through the trade screen. This covers both pickup paths: Mob.aiStep checks it
+	// before picking up, and the item sensor behind GoToWantedItem filters by it. Babies pick up nothing:
+	// their screen doesn't open, so players couldn't get it back.
 	@Inject(method = "wantsToPickUp", at = @At("HEAD"), cancellable = true)
 	private void hamlet$wantsAnything(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		Villager self = (Villager) (Object) this;
-		cir.setReturnValue(!self.isBaby() && this.hamlet$storage.canAddItem(stack));
+		boolean wanted = HamletVillager.BREEDING_FOOD.containsKey(stack.getItem())
+			|| self.getVillagerData().getProfession() == VillagerProfession.SHEPHERD && TendAnimals.isFeed(stack);
+		cir.setReturnValue(!self.isBaby() && wanted && this.hamlet$storage.canAddItem(stack));
 	}
 
 	@Inject(method = "pickUpItem", at = @At("HEAD"), cancellable = true)
