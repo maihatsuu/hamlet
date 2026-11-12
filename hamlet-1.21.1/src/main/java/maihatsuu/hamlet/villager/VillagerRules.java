@@ -11,7 +11,6 @@ public final class VillagerRules {
 		VillagerProfession.BUTCHER,
 		VillagerProfession.FLETCHER,
 		VillagerProfession.LEATHERWORKER,
-		VillagerProfession.MASON,
 		VillagerProfession.TOOLSMITH,
 		VillagerProfession.WEAPONSMITH,
 		HamletProfessions.BEEKEEPER,

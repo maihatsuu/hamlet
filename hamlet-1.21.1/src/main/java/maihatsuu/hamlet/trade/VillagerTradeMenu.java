@@ -7,6 +7,7 @@ import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 
 import maihatsuu.hamlet.Hamlet;
+import maihatsuu.hamlet.data.Price;
 import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
@@ -79,7 +80,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 	private final SimpleContainer stock;
 	private final SimpleContainer payments = new SimpleContainer(2);
 	private final SimpleContainer result = new SimpleContainer(1);
-	private final Map<Item, Integer> prices;
+	private final Map<Item, Price> prices;
 	/** Server only: the offer being paid for. */
 	@Nullable
 	private Offer selected;
@@ -94,7 +95,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		Inventory playerInventory,
 		SimpleContainer stock,
 		SimpleContainer storage,
-		Map<Item, Integer> prices,
+		Map<Item, Price> prices,
 		@Nullable Villager villager
 	) {
 		super(TYPE, containerId);
@@ -129,7 +130,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 
 	/** Claims the villager for this player and opens the screen. */
 	public static void open(Villager villager, Player player) {
-		Map<Item, Integer> prices = PriceLoader.prices();
+		Map<Item, Price> prices = PriceLoader.prices();
 		villager.setTradingPlayer(player);
 		player.openMenu(new ExtendedScreenHandlerFactory<TradeOpeningData>() {
 			@Override
@@ -157,13 +158,14 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		});
 	}
 
-	public int priceOf(Item item) {
+	public Price priceOf(Item item) {
 		return PriceLoader.priceOf(this.prices, item);
 	}
 
 	/**
-	 * Every offer: one row per kind of item in stock. Emeralds in the payment slots count as the player's, so
-	 * selecting an offer (which moves its cost there) doesn't change the list.
+	 * Every offer: one row per kind of item in stock, selling one batch of it (usually one item; see
+	 * {@link Price}). Emeralds in the payment slots count as the player's, so selecting an offer (which moves
+	 * its cost there) doesn't change the list.
 	 */
 	public List<Offer> offers() {
 		List<Offer> offers = new ArrayList<>();
@@ -176,11 +178,14 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 				continue;
 			}
 			listed.add(stack);
-			int price = this.priceOf(stack.getItem());
+			Price price = this.priceOf(stack.getItem());
+			int cost = price.emeralds();
+			int batch = Math.min(price.count(), stack.getMaxStackSize());
+			int inStock = this.countInStock(stack);
 			int maxStack = Items.EMERALD.getDefaultMaxStackSize();
-			offers.add(new Offer(emeralds(Math.min(price, maxStack)),
-				price > maxStack ? emeralds(price - maxStack) : ItemStack.EMPTY, stack.copyWithCount(1),
-				this.countInStock(stack), emeralds >= price));
+			offers.add(new Offer(emeralds(Math.min(cost, maxStack)),
+				cost > maxStack ? emeralds(cost - maxStack) : ItemStack.EMPTY, stack.copyWithCount(batch),
+				inStock, emeralds >= cost && inStock >= batch));
 		}
 		return offers;
 	}
@@ -279,7 +284,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		Offer offer = this.selected;
 		ItemStack shown = ItemStack.EMPTY;
 		if (offer != null && this.isPaid(offer)) {
-			shown = this.stockSlotOf(offer.result()) >= 0 ? offer.result().copy() : ItemStack.EMPTY;
+			shown = this.countInStock(offer.result()) >= offer.result().getCount() ? offer.result().copy() : ItemStack.EMPTY;
 		}
 		this.result.setItem(0, shown);
 	}
@@ -293,13 +298,14 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		return cost.isEmpty() || ItemStack.isSameItemSameComponents(payment, cost) && payment.getCount() >= cost.getCount();
 	}
 
-	private int stockSlotOf(ItemStack kind) {
-		for (int slot = 0; slot < this.stock.getContainerSize(); slot++) {
-			if (ItemStack.isSameItemSameComponents(this.stock.getItem(slot), kind)) {
-				return slot;
+	/** Removes {@code count} of {@code kind} from the stock, which a batch may spread over several slots. */
+	private void removeFromStock(ItemStack kind, int count) {
+		for (int slot = 0; slot < this.stock.getContainerSize() && count > 0; slot++) {
+			ItemStack stack = this.stock.getItem(slot);
+			if (ItemStack.isSameItemSameComponents(stack, kind)) {
+				count -= this.stock.removeItem(slot, count).getCount();
 			}
 		}
-		return -1;
 	}
 
 	/** Takes the payment and anything else the trade costs, once the result has been taken. Server only. */
@@ -310,10 +316,7 @@ public class VillagerTradeMenu extends AbstractContainerMenu {
 		}
 		this.payments.getItem(0).shrink(offer.costA().getCount());
 		this.payments.getItem(1).shrink(offer.costB().getCount());
-		int slot = this.stockSlotOf(offer.result());
-		if (slot >= 0) {
-			this.stock.removeItem(slot, 1);
-		}
+		this.removeFromStock(offer.result(), offer.result().getCount());
 		player.awardStat(Stats.TRADED_WITH_VILLAGER);
 		this.villager.playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
 		this.payments.setChanged();

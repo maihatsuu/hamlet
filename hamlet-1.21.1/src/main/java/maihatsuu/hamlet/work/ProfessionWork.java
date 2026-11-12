@@ -37,6 +37,8 @@ import net.minecraft.world.level.block.entity.LecternBlockEntity;
  *   <li>Librarian: a copy of the written or enchanted book on its lectern, or a plain book when there's
  *   nothing it can copy.</li>
  *   <li>Cleric: a random potion from {@link PriceLoader#clericPotions}.</li>
+ *   <li>Mason: faster, a batch of {@link #MASON_BATCH} of a random block from {@link PriceLoader#masonBlocks}
+ *   every minute, keeping up to {@link #MASON_CAP} of each block.</li>
  * </ul>
  * Librarians and clerics keep up to {@link #MAX_OF_EACH} of each item, since books and potions don't stack
  * and would otherwise fill the stock with one kind.
@@ -44,6 +46,11 @@ import net.minecraft.world.level.block.entity.LecternBlockEntity;
 public final class ProfessionWork extends WorkAtPoi {
 	/** Work time, at the workstation, between items: about 5 minutes. */
 	private static final long TICKS_PER_ITEM = 6000L;
+	/** The mason's work time between batches: about a minute. */
+	private static final long TICKS_PER_MASON_BATCH = 1200L;
+	private static final int MASON_BATCH = 8;
+	/** How many of each block a mason keeps in stock: 3 stacks. */
+	private static final int MASON_CAP = 3 * 64;
 	/**
 	 * Visits come about every 15 seconds while at the workstation, so the time since the last visit counts
 	 * as work up to this much; more means the villager was away from it, or off work.
@@ -69,7 +76,7 @@ public final class ProfessionWork extends WorkAtPoi {
 		long now = level.getGameTime();
 		this.workTicks += Math.max(0L, Math.min(now - this.lastVisit, MAX_TICKS_PER_VISIT));
 		this.lastVisit = now;
-		if (this.workTicks < TICKS_PER_ITEM) {
+		if (this.workTicks < (this.profession == VillagerProfession.MASON ? TICKS_PER_MASON_BATCH : TICKS_PER_ITEM)) {
 			return;
 		}
 		SimpleContainer stock = ((HamletVillager) villager).hamlet$getStock();
@@ -88,7 +95,8 @@ public final class ProfessionWork extends WorkAtPoi {
 	private static boolean makesItems(VillagerProfession profession) {
 		return profession == VillagerProfession.CARTOGRAPHER
 			|| profession == VillagerProfession.LIBRARIAN
-			|| profession == VillagerProfession.CLERIC;
+			|| profession == VillagerProfession.CLERIC
+			|| profession == VillagerProfession.MASON;
 	}
 
 	/** Makes one item into the stock, if there's one to make now. */
@@ -98,6 +106,9 @@ public final class ProfessionWork extends WorkAtPoi {
 		}
 		if (this.profession == VillagerProfession.LIBRARIAN) {
 			return storeUnlessCapped(stock, copyBook(level, site));
+		}
+		if (this.profession == VillagerProfession.MASON) {
+			return cutBlocks(level, stock);
 		}
 		return brewPotion(level, stock);
 	}
@@ -132,6 +143,22 @@ public final class ProfessionWork extends WorkAtPoi {
 			}
 		}
 		return !choices.isEmpty() && storeUnlessCapped(stock, Util.getRandom(choices, level.random));
+	}
+
+	/** A batch of a random block from the mason's list that the stock doesn't already have enough of. */
+	private static boolean cutBlocks(ServerLevel level, SimpleContainer stock) {
+		List<ItemStack> choices = new ArrayList<>();
+		for (Item block : PriceLoader.masonBlocks()) {
+			ItemStack batch = new ItemStack(block, MASON_BATCH);
+			if (countInStock(stock, batch) < MASON_CAP) {
+				choices.add(batch);
+			}
+		}
+		if (choices.isEmpty()) {
+			return false;
+		}
+		store(stock, Util.getRandom(choices, level.random));
+		return true;
 	}
 
 	private static boolean storeUnlessCapped(SimpleContainer stock, ItemStack stack) {
