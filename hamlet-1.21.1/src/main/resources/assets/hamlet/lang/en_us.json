@@ -4,6 +4,8 @@
 	"entity.hamlet.fishing_bobber": "Villager Fishing Bobber",
 	"filled_map.hamlet.ancient_city": "Deep Dark Explorer Map",
 	"filled_map.hamlet.desert_pyramid": "Desert Explorer Map",
+	"filled_map.hamlet.mineshaft": "Mineshaft Explorer Map",
+	"filled_map.hamlet.warm_ocean_ruins": "Warm Ocean Explorer Map",
 	"hamlet.trade.in_stock": "%s in stock",
 	"hamlet.service.bring_template": "Bring a smithing template to duplicate",
 	"hamlet.service.bring_enchanted_book": "Bring an enchanted book to copy",

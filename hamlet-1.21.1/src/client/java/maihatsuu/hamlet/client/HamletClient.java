@@ -1,10 +1,12 @@
 package maihatsuu.hamlet.client;
 
+import maihatsuu.hamlet.Hamlet;
 import maihatsuu.hamlet.client.render.FishingBobberRenderer;
 import maihatsuu.hamlet.client.screen.VillagerTradeScreen;
 import maihatsuu.hamlet.entity.FishingBobber;
 import maihatsuu.hamlet.entity.HamletEntities;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
+import maihatsuu.hamlet.work.ExplorerMap;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
@@ -23,6 +25,18 @@ public class HamletClient implements ClientModInitializer {
 		MenuScreens.register(VillagerTradeMenu.TYPE, VillagerTradeScreen::new);
 		EntityRendererRegistry.register(HamletEntities.FISHING_BOBBER, FishingBobberRenderer::new);
 		registerRodCastTexture();
+		registerExplorerMapTextures();
+	}
+
+	/**
+	 * Gives each kind of explorer map its own item texture: the property is the kind's index, which the
+	 * overrides in {@code assets/minecraft/models/item/filled_map.json} pick a model from.
+	 */
+	private static void registerExplorerMapTextures() {
+		ItemProperties.register(Items.FILLED_MAP, Hamlet.id("explorer_map"), (stack, level, entity, seed) -> {
+			ExplorerMap kind = ExplorerMap.of(stack);
+			return kind == null ? 0.0F : (kind.ordinal() + 1) / 16.0F;
+		});
 	}
 
 	/**

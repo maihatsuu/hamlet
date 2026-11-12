@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/generated",
+	"textures": {
+		"layer0": "hamlet:item/buried_mineshaft_map"
+	}
+}

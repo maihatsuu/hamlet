@@ -10,12 +10,16 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.saveddata.maps.MapDecorationType;
 
 /**
- * Map icons for the explorer maps vanilla doesn't have. Each icon's texture is
+ * Map icons for the cartographer's explorer maps that vanilla doesn't have. Each icon's texture is
  * {@code assets/hamlet/textures/map/decorations/<name>.png}, 8×8 like vanilla's.
  */
 public final class HamletMapDecorations {
 	public static final Holder<MapDecorationType> ANCIENT_CITY = register("ancient_city", 0x0E4B5A);
 	public static final Holder<MapDecorationType> DESERT_PYRAMID = register("desert_pyramid", 0xD8B26A);
+	public static final Holder<MapDecorationType> MINESHAFT = register("mineshaft", 0x7A5A35);
+	public static final Holder<MapDecorationType> WARM_OCEAN_RUINS = register("warm_ocean_ruins", 0xD9C48A);
+	/** Hamlet's own mansion icon, for the cartographer's maps; vanilla's maps keep vanilla's. */
+	public static final Holder<MapDecorationType> WOODLAND_MANSION = register("woodland_mansion", 0x524B44);
 
 	private HamletMapDecorations() {
 	}

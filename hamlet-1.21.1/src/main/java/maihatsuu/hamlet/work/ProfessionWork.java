@@ -1,11 +1,14 @@
 package maihatsuu.hamlet.work;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import maihatsuu.hamlet.Hamlet;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
 
+import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
@@ -36,8 +39,6 @@ public final class ProfessionWork extends WorkAtPoi {
 	/** Cartographer: work time towards the next map. Not saved, so a reload restarts the current map. */
 	private long workTicks;
 	private long lastVisit = Long.MIN_VALUE / 2;
-	/** Cartographer: which kind to try first, rotated so one that can't be found doesn't block the rest. */
-	private int nextKind;
 
 	public ProfessionWork(VillagerProfession profession) {
 		this.profession = profession;
@@ -57,31 +58,37 @@ public final class ProfessionWork extends WorkAtPoi {
 		villager.getBrain().getMemory(MemoryModuleType.JOB_SITE)
 			.filter(site -> site.dimension() == level.dimension())
 			.ifPresent(site -> {
-				if (this.drawMap(level, ((HamletVillager) villager).hamlet$getStock(), site.pos())) {
+				if (drawMap(level, ((HamletVillager) villager).hamlet$getStock(), site.pos())) {
 					this.workTicks = 0L;
 				}
 			});
 	}
 
 	/**
-	 * Draws one map of a kind missing from the stock, if one can be charted now. Searching charts the
+	 * Draws one map of a random kind missing from the stock, if one can be charted now. Searching charts the
 	 * structure, so this only searches when the map can be stored.
+	 * <p>
+	 * Kinds are tried in random order, so one that can't be found doesn't hold up the rest. This runs at
+	 * most one real search: after one, the rate limit makes the rest return at once, as do kinds that
+	 * recently found nothing.
 	 */
-	private boolean drawMap(ServerLevel level, SimpleContainer stock, BlockPos from) {
+	private static boolean drawMap(ServerLevel level, SimpleContainer stock, BlockPos from) {
 		if (isFull(stock)) {
 			return false;
 		}
-		ExplorerMap[] kinds = ExplorerMap.values();
-		for (int i = 0; i < kinds.length; i++) {
-			ExplorerMap kind = kinds[(this.nextKind + i) % kinds.length];
-			if (inStock(stock, kind)) {
-				continue;
+		List<ExplorerMap> missing = new ArrayList<>();
+		for (ExplorerMap kind : ExplorerMap.values()) {
+			if (!inStock(stock, kind)) {
+				missing.add(kind);
 			}
-			this.nextKind = (kind.ordinal() + 1) % kinds.length;
-			// One search per visit at most: they're slow, and rate-limited anyway.
+		}
+		Util.shuffle(missing, level.random);
+		for (ExplorerMap kind : missing) {
 			Optional<ItemStack> map = kind.draw(level, from);
-			map.ifPresent(stack -> store(stock, stack));
-			return map.isPresent();
+			if (map.isPresent()) {
+				store(stock, map.get());
+				return true;
+			}
 		}
 		return false;
 	}

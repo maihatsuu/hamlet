@@ -2,6 +2,8 @@ package maihatsuu.hamlet.work;
 
 import java.util.Optional;
 
+import org.jetbrains.annotations.Nullable;
+
 import maihatsuu.hamlet.Hamlet;
 
 import net.minecraft.core.BlockPos;
@@ -20,13 +22,23 @@ import net.minecraft.world.level.saveddata.maps.MapDecorationType;
 import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 
-/** The explorer maps a cartographer draws into its stock, made the way vanilla's cartographer trades make them. */
+/**
+ * The explorer maps a cartographer draws into its stock, made the way vanilla's cartographer trades make them.
+ * <p>
+ * Each kind has its own item texture, picked by the {@code hamlet:explorer_map} item property in
+ * {@code assets/minecraft/models/item/filled_map.json} from this order: add new kinds at the end, and add
+ * their overrides there too.
+ */
 public enum ExplorerMap {
 	ANCIENT_CITY(hamletTag("on_ancient_city_maps"), "filled_map.hamlet.ancient_city", HamletMapDecorations.ANCIENT_CITY),
-	WOODLAND_MANSION(StructureTags.ON_WOODLAND_EXPLORER_MAPS, "filled_map.mansion", MapDecorationTypes.WOODLAND_MANSION),
+	WOODLAND_MANSION(StructureTags.ON_WOODLAND_EXPLORER_MAPS, "filled_map.mansion", HamletMapDecorations.WOODLAND_MANSION),
 	DESERT_PYRAMID(hamletTag("on_desert_pyramid_maps"), "filled_map.hamlet.desert_pyramid", HamletMapDecorations.DESERT_PYRAMID),
 	OCEAN_MONUMENT(StructureTags.ON_OCEAN_EXPLORER_MAPS, "filled_map.monument", MapDecorationTypes.OCEAN_MONUMENT),
-	TRIAL_CHAMBERS(StructureTags.ON_TRIAL_CHAMBERS_MAPS, "filled_map.trial_chambers", MapDecorationTypes.TRIAL_CHAMBERS);
+	TRIAL_CHAMBERS(StructureTags.ON_TRIAL_CHAMBERS_MAPS, "filled_map.trial_chambers", MapDecorationTypes.TRIAL_CHAMBERS),
+	JUNGLE_TEMPLE(hamletTag("on_jungle_temple_maps"), "filled_map.explorer_jungle", MapDecorationTypes.JUNGLE_TEMPLE),
+	SWAMP_HUT(hamletTag("on_swamp_hut_maps"), "filled_map.explorer_swamp", MapDecorationTypes.SWAMP_HUT),
+	MINESHAFT(hamletTag("on_mineshaft_maps"), "filled_map.hamlet.mineshaft", HamletMapDecorations.MINESHAFT),
+	WARM_OCEAN_RUINS(hamletTag("on_warm_ocean_ruins_maps"), "filled_map.hamlet.warm_ocean_ruins", HamletMapDecorations.WARM_OCEAN_RUINS);
 
 	private final TagKey<Structure> structure;
 	private final String name;
@@ -38,9 +50,24 @@ public enum ExplorerMap {
 		this.decoration = decoration;
 	}
 
-	/** Structure tags for the maps vanilla doesn't have, so datapacks can point them at other structures. */
+	/**
+	 * Structure tags for the maps vanilla doesn't have, so datapacks can point them at other structures.
+	 * Jungle temples and swamp huts get one too: vanilla's tags for them are only filled by the experimental
+	 * trade rebalance datapack, so they're empty in normal worlds.
+	 */
 	private static TagKey<Structure> hamletTag(String name) {
 		return TagKey.create(Registries.STRUCTURE, Hamlet.id(name));
+	}
+
+	/** Which kind of explorer map {@code stack} is, by its name; null if it isn't one. */
+	@Nullable
+	public static ExplorerMap of(ItemStack stack) {
+		for (ExplorerMap kind : values()) {
+			if (kind.isMap(stack)) {
+				return kind;
+			}
+		}
+		return null;
 	}
 
 	/** Whether {@code stack} is one of these maps, by its name. */

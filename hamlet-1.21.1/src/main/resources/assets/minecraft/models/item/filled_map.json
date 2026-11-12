@@ -1,0 +1,63 @@
+{
+	"parent": "minecraft:item/generated",
+	"textures": {
+		"layer0": "minecraft:item/filled_map",
+		"layer1": "minecraft:item/filled_map_markings"
+	},
+	"overrides": [
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.0625
+			},
+			"model": "hamlet:item/buried_ancient_city_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.125
+			},
+			"model": "hamlet:item/woodland_mansion_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.1875
+			},
+			"model": "hamlet:item/desert_pyramid_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.25
+			},
+			"model": "hamlet:item/ocean_monument_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.3125
+			},
+			"model": "hamlet:item/buried_trial_chambers_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.375
+			},
+			"model": "hamlet:item/jungle_pyramid_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.4375
+			},
+			"model": "hamlet:item/swamp_hut_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.5
+			},
+			"model": "hamlet:item/buried_mineshaft_map"
+		},
+		{
+			"predicate": {
+				"hamlet:explorer_map": 0.5625
+			},
+			"model": "hamlet:item/warm_ocean_ruins_map"
+		}
+	]
+}
