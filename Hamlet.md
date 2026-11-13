@@ -126,8 +126,14 @@ match:
 
 ## Villages
 
-Houses for retired professions are removed from village structures and replaced with new hand-made ones,
-including campfire-smoked beehives near farms.
+Houses for the retired vanilla jobs (armorer, butcher, fletcher, leatherworker's tannery, toolsmith
+and weaponsmith) no longer generate in new villages of any biome, zombie villages included. Hamlet ships
+copies of vanilla's `village/<biome>/houses` and `village/<biome>/zombie/houses` template pools without
+them, written by `tools/strip_job_houses.py` from the Minecraft jar; rerun it rather than editing the
+copies. The remaining houses fill the gap at their usual weights, and their loot chests (such as the
+weaponsmith's and toolsmith's) go with them. Villages that already generated keep theirs.
+
+Planned: new hand-made houses in their place, including campfire-smoked beehives near farms.
 
 ## Open questions
 
@@ -179,5 +185,5 @@ including campfire-smoked beehives near farms.
 - Villagers killed by zombies always zombify, on Easy, Normal and Hard. Curing changes no prices.
 - Two villagers with 3 bread or baked potatoes each in storage, and a free bed, breed and eat them. Raw potatoes, carrots or no food: no breeding.
 - Give one villager 12 bread and leave the others empty: it throws bread to the villagers it meets until each has 3, keeping 3 itself.
-- New villages contain the new houses and no retired ones.
+- New villages (each biome, and zombie villages) have no armorer, butcher, fletcher, tannery, toolsmith or weaponsmith houses; the other houses still generate.
 - Emerald ore rates match diamonds at depth everywhere, and mountains also have veins in their peaks.
