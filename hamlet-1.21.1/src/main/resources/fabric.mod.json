@@ -36,6 +36,7 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
-		"pasture": "*"
+		"pasture": "*",
+		"archive": "*"
 	}
 }

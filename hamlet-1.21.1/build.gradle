@@ -4,11 +4,8 @@ plugins {
 }
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+	// Cloth Config, which Archive needs, for dev runs with Archive.
+	maven { url "https://maven.shedaniel.me/" }
 }
 
 loom {
@@ -36,6 +33,15 @@ dependencies {
 	def pastureJar = file("../../Pasture/pasture-1.21.1/build/libs/pasture-1.0.0.jar")
 	if (pastureJar.exists()) {
 		modLocalRuntime files(pastureJar)
+	}
+
+	// Archive, likewise: Hamlet only looks its tome up by id. Archive needs Cloth Config.
+	def archiveJar = file("../../Archive/archive-1.21.1/build/libs/archive-1.0.0.jar")
+	if (archiveJar.exists()) {
+		modLocalRuntime files(archiveJar)
+		modLocalRuntime("me.shedaniel.cloth:cloth-config-fabric:15.0.140") {
+			exclude(group: "net.fabricmc.fabric-api")
+		}
 	}
 }
 

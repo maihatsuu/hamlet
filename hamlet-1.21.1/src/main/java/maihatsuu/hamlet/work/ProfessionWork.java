@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import maihatsuu.hamlet.Hamlet;
+import maihatsuu.hamlet.compat.ArchiveCompat;
 import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
@@ -34,13 +35,14 @@ import net.minecraft.world.level.block.entity.LecternBlockEntity;
  * vanilla's restocking. While working at its workstation, a villager makes one item about every 5 minutes:
  * <ul>
  *   <li>Cartographer: an explorer map, keeping one of each kind in stock.</li>
- *   <li>Librarian: a copy of the written or enchanted book on its lectern, or a plain book when there's
+ *   <li>Librarian: a copy of the written or enchanted book (or Archive tome) on its lectern, or a plain book when there's
  *   nothing it can copy or the copy is capped in stock.</li>
  *   <li>Cleric: a random potion from {@link PriceLoader#clericPotions}.</li>
  *   <li>Mason: faster, a batch of {@link #MASON_BATCH} of a random block from {@link PriceLoader#masonBlocks}
  *   every minute.</li>
  * </ul>
- * Like all work output, each kind of item stops at {@link #capOf its cap}: 3 stacks.
+ * Like all work output, each kind of item stops at {@link #capOf its cap}: 3 stacks, except the librarian's
+ * books ({@link #storeBook}).
  */
 public final class ProfessionWork extends WorkAtPoi {
 	/** Work time, at the workstation, between items: about 5 minutes. */
@@ -103,7 +105,7 @@ public final class ProfessionWork extends WorkAtPoi {
 		}
 		if (this.profession == VillagerProfession.LIBRARIAN) {
 			// With the lectern's book capped in stock, it makes plain books instead until some sell.
-			return storeUnlessCapped(stock, copyBook(level, site)) || storeUnlessCapped(stock, new ItemStack(Items.BOOK));
+			return storeBook(stock, copyBook(level, site)) || storeBook(stock, new ItemStack(Items.BOOK));
 		}
 		if (this.profession == VillagerProfession.MASON) {
 			return cutBlocks(level, stock);
@@ -112,13 +114,13 @@ public final class ProfessionWork extends WorkAtPoi {
 	}
 
 	/**
-	 * What a librarian makes at its lectern: a copy of an enchanted book on it, a copy of a written book that
+	 * What a librarian makes at its lectern: a copy of an enchanted book or Archive tome on it, a copy of a written book that
 	 * can still be copied (one generation further, as vanilla's copying does; copies of copies can't be), or
 	 * otherwise a plain book.
 	 */
 	private static ItemStack copyBook(ServerLevel level, BlockPos site) {
 		ItemStack book = level.getBlockEntity(site) instanceof LecternBlockEntity lectern ? lectern.getBook() : ItemStack.EMPTY;
-		if (book.is(Items.ENCHANTED_BOOK)) {
+		if (book.is(Items.ENCHANTED_BOOK) || ArchiveCompat.isTome(book)) {
 			return book.copyWithCount(1);
 		}
 		WrittenBookContent content = book.is(Items.WRITTEN_BOOK) ? book.get(DataComponents.WRITTEN_BOOK_CONTENT) : null;
@@ -156,6 +158,19 @@ public final class ProfessionWork extends WorkAtPoi {
 			return false;
 		}
 		store(stock, Util.getRandom(choices, level.random));
+		return true;
+	}
+
+	/**
+	 * The librarian is the exception to the 3-stack cap: it keeps one stack of each book (64 plain books, 16
+	 * of a tome or a written copy), but 3 of an enchanted book, which doesn't stack.
+	 */
+	private static boolean storeBook(SimpleContainer stock, ItemStack book) {
+		int cap = book.is(Items.ENCHANTED_BOOK) ? STACKS_PER_ITEM : book.getMaxStackSize();
+		if (countInStock(stock, book) >= cap) {
+			return false;
+		}
+		store(stock, book);
 		return true;
 	}
 
