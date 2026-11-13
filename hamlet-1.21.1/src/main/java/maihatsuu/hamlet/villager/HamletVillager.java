@@ -24,6 +24,23 @@ public interface HamletVillager {
 	/** Anything players or pickups give the villager, such as food; players can take it back freely. */
 	SimpleContainer hamlet$getStorage();
 
+	/** Whether storage holds at least one {@code item}, such as a bucket the villager needs for its work. */
+	default boolean hamlet$hasInStorage(Item item) {
+		return this.hamlet$getStorage().countItem(item) > 0;
+	}
+
+	/** Uses up one {@code item} from storage; false if there's none. */
+	default boolean hamlet$takeFromStorage(Item item) {
+		SimpleContainer storage = this.hamlet$getStorage();
+		for (int slot = 0; slot < storage.getContainerSize(); slot++) {
+			if (storage.getItem(slot).is(item)) {
+				storage.removeItem(slot, 1);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** The food points of the breeding food in storage. */
 	default int hamlet$foodPoints() {
 		SimpleContainer storage = this.hamlet$getStorage();

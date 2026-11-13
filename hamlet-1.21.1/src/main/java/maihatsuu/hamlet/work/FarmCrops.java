@@ -131,7 +131,7 @@ public final class FarmCrops extends Behavior<Villager> {
 		BlockPos target = this.target;
 		if (target != null) {
 			boolean hive = this.targetIsHive;
-			if (hive ? !Hives.isReady(level, target) || !Hives.wouldStore(villager, this.useBottle) : !this.isRipe(level, target, villager)) {
+			if (hive ? !Hives.isReady(level, target) || !Hives.canHarvestWith(villager, this.useBottle) : !this.isRipe(level, target, villager)) {
 				this.dropTarget(villager);
 			} else if (hive ? Hives.canReach(villager, target) : canReach(villager, target)) {
 				if (hive) {
@@ -166,7 +166,7 @@ public final class FarmCrops extends Behavior<Villager> {
 				this.target = hive;
 				this.targetIsHive = true;
 				this.targetSince = time;
-				this.useBottle = Hives.pickBottle(villager, level.random);
+				this.useBottle = Hives.pickBottle(villager);
 				Hives.holdTool(villager, this.useBottle);
 				brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(hive, this.speed, 1));
 				brain.setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(hive));

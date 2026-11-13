@@ -10,7 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
@@ -28,10 +27,11 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Which hives a farmer harvests, and how: beehives and bee nests near its composter that are full of honey
  * and smoked by a lit campfire below, using vanilla's own check for whether harvesting would anger the bees.
- * Unsmoked hives are left alone. Like a player, it either shears a hive (3 honeycomb) or bottles it (1 honey
- * bottle), picked at random.
+ * Unsmoked hives are left alone. Like a player, it either bottles a hive (1 honey bottle), using up a glass
+ * bottle from its storage, or shears it (3 honeycomb). It bottles whenever it has a bottle and isn't capped
+ * on honey, and shears otherwise.
  */
-final class Hives {
+public final class Hives {
 	/** Wider and taller than the farmer's field, so hives in the trees around it count. */
 	private static final int APIARY_RADIUS = 12;
 	private static final int APIARY_HEIGHT = 4;
@@ -83,20 +83,28 @@ final class Hives {
 		return useBottle ? new ItemStack(Items.HONEY_BOTTLE) : new ItemStack(Items.HONEYCOMB, HONEYCOMB_PER_HIVE);
 	}
 
-	/** Whether harvesting with a bottle (or with shears) would store anything. */
-	static boolean wouldStore(Villager villager, boolean useBottle) {
-		return !ProfessionWork.isCapped(((HamletVillager) villager).hamlet$getStock(), harvestOf(useBottle));
+	/**
+	 * Whether harvesting with a bottle (or with shears) is possible and would store anything: a bottle needs a
+	 * glass bottle in storage.
+	 */
+	static boolean canHarvestWith(Villager villager, boolean useBottle) {
+		HamletVillager hamlet = (HamletVillager) villager;
+		return (!useBottle || hamlet.hamlet$hasInStorage(Items.GLASS_BOTTLE))
+			&& !ProfessionWork.isCapped(hamlet.hamlet$getStock(), harvestOf(useBottle));
 	}
 
-	/** A bottle or shears, at random, unless the stock is capped on what one of them gives. */
-	static boolean pickBottle(Villager villager, RandomSource random) {
-		boolean bottle = wouldStore(villager, true);
-		boolean shears = wouldStore(villager, false);
-		return bottle && (!shears || random.nextBoolean());
+	/** A bottle when it can use one, else shears. */
+	static boolean pickBottle(Villager villager) {
+		return canHarvestWith(villager, true);
+	}
+
+	/** What a farmer picks up when it's thrown to it, besides food: glass bottles for honey. */
+	public static boolean wantsToPickUp(ItemStack stack) {
+		return stack.is(Items.GLASS_BOTTLE);
 	}
 
 	private static boolean bothCapped(Villager villager) {
-		return !wouldStore(villager, true) && !wouldStore(villager, false);
+		return !canHarvestWith(villager, true) && !canHarvestWith(villager, false);
 	}
 
 	/** Holds the tool for this harvest while walking to the hive. */
@@ -114,6 +122,9 @@ final class Hives {
 
 	/** Vanilla's yields: a glass bottle gives one honey bottle, shears give three honeycomb. */
 	static void harvest(ServerLevel level, Villager villager, BlockPos pos, boolean useBottle) {
+		if (useBottle && !((HamletVillager) villager).hamlet$takeFromStorage(Items.GLASS_BOTTLE)) {
+			return;
+		}
 		BlockState state = level.getBlockState(pos);
 		// The smoke means the bees stay calm, so vanilla's path for a smoked hive: empty it, release nobody.
 		((BeehiveBlock) state.getBlock()).resetHoneyLevel(level, state, pos);

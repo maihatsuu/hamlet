@@ -235,6 +235,25 @@ public final class ProfessionWork extends WorkAtPoi {
 	}
 
 	/**
+	 * Like {@link #store}, for output picked up off the ground: stores what fits under the cap and returns the
+	 * rest, which stays on the ground.
+	 */
+	public static ItemStack storePickedUp(SimpleContainer stock, ItemStack stack) {
+		int room = Math.max(0, capOf(stack) - countInStock(stock, stack));
+		ItemStack taken = stack.copyWithCount(Math.min(room, stack.getCount()));
+		ItemStack rest = stack.copyWithCount(stack.getCount() - taken.getCount());
+		if (!taken.isEmpty()) {
+			rest.grow(stock.addItem(taken).getCount());
+		}
+		return rest;
+	}
+
+	/** Whether {@code stack}'s kind is capped in the stock; public for pickups. */
+	public static boolean isCappedInStock(SimpleContainer stock, ItemStack stack) {
+		return isCapped(stock, stack);
+	}
+
+	/**
 	 * How much of one kind of item, by item and components, a villager keeps in stock: 3 stacks, so 192
 	 * wheat but 3 milk buckets or potions. Cartographers keep one of each map anyway.
 	 */

@@ -30,6 +30,13 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Pasture, for testing Hamlet's compatibility in dev runs. Hamlet calls it by reflection, so it isn't
+	// needed to build, and this only applies where a Pasture build sits next to Hamlet (not in CI).
+	def pastureJar = file("../../Pasture/pasture-1.21.1/build/libs/pasture-1.0.0.jar")
+	if (pastureJar.exists()) {
+		modLocalRuntime files(pastureJar)
+	}
 }
 
 processResources {

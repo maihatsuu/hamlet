@@ -11,6 +11,7 @@ import com.mojang.serialization.Codec;
 import org.jetbrains.annotations.Nullable;
 
 import maihatsuu.hamlet.Hamlet;
+import maihatsuu.hamlet.compat.PastureCompat;
 import maihatsuu.hamlet.mixin.SheepAccessor;
 import maihatsuu.hamlet.villager.HamletVillager;
 import maihatsuu.hamlet.villager.WorkRequirements;
@@ -54,7 +55,13 @@ import net.minecraft.world.phys.AABB;
 /**
  * A shepherd's whole work period: wander the pasture around its loom, and whenever an animal is ready, walk
  * up to it and take what it gives into stock: wool from sheep, milk from cows and goats, mushroom stew from
- * mooshrooms, scutes from armadillos and eggs from chickens.
+ * mooshrooms, scutes from armadillos and eggs from chickens. Milk and stew need a bucket or bowl from its
+ * storage, which players fill, used up as a player's would be; without one it skips those animals.
+ * <p>
+ * With Pasture installed, it follows Pasture's rules through {@link PastureCompat}: it milks cows and goats
+ * into glass bottles when they have milk (grazing refills them, not a timer), mooshroom stew uses up the same
+ * milk, chickens aren't tended (breeding them drops eggs, which it picks up into stock), and armadillos are
+ * brushed the vanilla way, so Pasture's scutes and one-day wait apply and it picks the scutes up.
  * <p>
  * With nothing to tend, it breeds animals with feed from its storage, which players fill: vanilla's breeding
  * items, such as wheat for sheep, cows and goats or seeds for chickens. It breeds those animals plus pigs and
@@ -229,9 +236,47 @@ public final class TendAnimals extends Behavior<Villager> {
 		return nearest;
 	}
 
-	/** Ready to give something, and the stock isn't capped on what it gives. */
+	/**
+	 * Ready to give something, the shepherd has the bucket or bowl it needs, and the stock isn't capped on
+	 * what it gives.
+	 */
 	private static boolean isReady(Villager villager, Animal animal, long now) {
-		return isReady(animal, now) && !ProfessionWork.isCapped(((HamletVillager) villager).hamlet$getStock(), productOf(animal));
+		HamletVillager hamlet = (HamletVillager) villager;
+		Item container = containerFor(animal);
+		return isReady(animal, now)
+			&& (container == null || hamlet.hamlet$hasInStorage(container))
+			&& !ProfessionWork.isCapped(hamlet.hamlet$getStock(), productOf(animal));
+	}
+
+	/**
+	 * The container a product needs, used up from storage: a bowl for stew, a bucket for milk, or with
+	 * Pasture a glass bottle.
+	 */
+	@Nullable
+	private static Item containerFor(Animal animal) {
+		// MushroomCow extends Cow, so it has to be checked first.
+		if (animal instanceof MushroomCow) {
+			return Items.BOWL;
+		}
+		if (animal instanceof Cow || animal instanceof Goat) {
+			return PastureCompat.isLoaded() ? Items.GLASS_BOTTLE : Items.BUCKET;
+		}
+		return null;
+	}
+
+	/**
+	 * What a shepherd picks up when it's thrown to it: feed for breeding, and its containers. With Pasture
+	 * it also picks up the eggs and scutes its animals drop, into stock (see {@link #isDroppedProduct}).
+	 */
+	public static boolean wantsToPickUp(ItemStack stack) {
+		return isFeed(stack) || stack.is(Items.BOWL)
+			|| stack.is(PastureCompat.isLoaded() ? Items.GLASS_BOTTLE : Items.BUCKET)
+			|| PastureCompat.isDroppedProduct(stack);
+	}
+
+	/** Eggs and scutes with Pasture: work output that lands on the ground, so it's picked up into stock. */
+	public static boolean isDroppedProduct(ItemStack stack) {
+		return PastureCompat.isDroppedProduct(stack);
 	}
 
 	/** One of what the animal gives, to check against the stock cap. */
@@ -243,7 +288,7 @@ public final class TendAnimals extends Behavior<Villager> {
 			return new ItemStack(Items.MUSHROOM_STEW);
 		}
 		if (animal instanceof Cow || animal instanceof Goat) {
-			return new ItemStack(Items.MILK_BUCKET);
+			return new ItemStack(PastureCompat.isLoaded() ? PastureCompat.milkBottle() : Items.MILK_BUCKET);
 		}
 		if (animal instanceof Armadillo) {
 			return new ItemStack(Items.ARMADILLO_SCUTE);
@@ -347,6 +392,16 @@ public final class TendAnimals extends Behavior<Villager> {
 		if (animal instanceof Sheep sheep) {
 			return sheep.readyForShearing();
 		}
+		if (PastureCompat.isLoaded()) {
+			// Pasture's own state instead of a timer. Chickens give eggs only by breeding.
+			if (animal instanceof Cow || animal instanceof Goat) {
+				return PastureCompat.canMilk(animal);
+			}
+			if (animal instanceof Armadillo armadillo) {
+				return !armadillo.isScared() && PastureCompat.canBrush(armadillo);
+			}
+			return false;
+		}
 		if (!onCooldownTimer(animal) || animal.isBaby()) {
 			return false;
 		}
@@ -365,6 +420,14 @@ public final class TendAnimals extends Behavior<Villager> {
 
 	private static void tend(ServerLevel level, Villager villager, Animal animal, long now) {
 		SimpleContainer stock = ((HamletVillager) villager).hamlet$getStock();
+		Item container = containerFor(animal);
+		if (PastureCompat.isLoaded() && !(animal instanceof Sheep)) {
+			tendWithPasture(villager, animal, stock);
+			return;
+		}
+		if (container != null && !((HamletVillager) villager).hamlet$takeFromStorage(container)) {
+			return;
+		}
 		if (animal instanceof Sheep sheep) {
 			// Vanilla's Sheep.shear drops the wool on the ground; this stores it instead.
 			sheep.setSheared(true);
@@ -396,11 +459,33 @@ public final class TendAnimals extends Behavior<Villager> {
 		animal.setAttached(LAST_PRODUCED, now);
 	}
 
+	/** Pasture's rules: sheep as usual, milk and stew through its API, armadillos brushed the vanilla way. */
+	private static void tendWithPasture(Villager villager, Animal animal, SimpleContainer stock) {
+		HamletVillager hamlet = (HamletVillager) villager;
+		if (animal instanceof MushroomCow) {
+			if (hamlet.hamlet$hasInStorage(Items.BOWL) && PastureCompat.milkForStew(animal)) {
+				hamlet.hamlet$takeFromStorage(Items.BOWL);
+				ProfessionWork.store(stock, new ItemStack(Items.MUSHROOM_STEW));
+			}
+		} else if (animal instanceof Cow || animal instanceof Goat) {
+			if (hamlet.hamlet$hasInStorage(Items.GLASS_BOTTLE)) {
+				ItemStack milk = PastureCompat.milk(animal);
+				if (!milk.isEmpty()) {
+					hamlet.hamlet$takeFromStorage(Items.GLASS_BOTTLE);
+					ProfessionWork.store(stock, milk);
+				}
+			}
+		} else if (animal instanceof Armadillo armadillo) {
+			// Drops Pasture's 2-6 scutes and starts its wait; the shepherd picks them up.
+			armadillo.brushOffScute();
+		}
+	}
+
 	/** The tool the shepherd holds while walking over. Chickens need nothing. */
 	private static void holdToolFor(Villager villager, Animal animal) {
 		ItemStack tool = animal instanceof Sheep ? new ItemStack(Items.SHEARS)
 			: animal instanceof MushroomCow ? new ItemStack(Items.BOWL)
-			: animal instanceof Cow || animal instanceof Goat ? new ItemStack(Items.BUCKET)
+			: animal instanceof Cow || animal instanceof Goat ? new ItemStack(containerFor(animal))
 			: animal instanceof Armadillo ? new ItemStack(Items.BRUSH)
 			: ItemStack.EMPTY;
 		villager.setItemSlot(EquipmentSlot.MAINHAND, tool);
@@ -417,7 +502,8 @@ public final class TendAnimals extends Behavior<Villager> {
 
 	private static void putToolAway(Villager villager) {
 		ItemStack held = villager.getMainHandItem();
-		if (held.is(Items.SHEARS) || held.is(Items.BUCKET) || held.is(Items.BOWL) || held.is(Items.BRUSH) || isFeed(held)) {
+		if (held.is(Items.SHEARS) || held.is(Items.BUCKET) || held.is(Items.GLASS_BOTTLE) || held.is(Items.BOWL)
+			|| held.is(Items.BRUSH) || isFeed(held)) {
 			villager.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
 		}
 	}

@@ -8,6 +8,8 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import maihatsuu.hamlet.data.PriceLoader;
 import maihatsuu.hamlet.trade.VillagerTradeMenu;
 import maihatsuu.hamlet.villager.HamletVillager;
+import maihatsuu.hamlet.work.Hives;
+import maihatsuu.hamlet.work.ProfessionWork;
 import maihatsuu.hamlet.work.TendAnimals;
 import maihatsuu.hamlet.villager.VillagerRules;
 
@@ -147,15 +149,24 @@ abstract class VillagerMixin implements HamletVillager {
 		return false;
 	}
 
-	// Adult villagers pick up breeding food, and shepherds their animals' feed, while it fits in storage;
+	// Adult villagers pick up breeding food, shepherds their animals' feed, buckets and bowls, and farmers
+	// glass bottles, while it fits in storage;
 	// anything else has to go in through the trade screen. This covers both pickup paths: Mob.aiStep checks it
 	// before picking up, and the item sensor behind GoToWantedItem filters by it. Babies pick up nothing:
 	// their screen doesn't open, so players couldn't get it back.
 	@Inject(method = "wantsToPickUp", at = @At("HEAD"), cancellable = true)
 	private void hamlet$wantsAnything(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		Villager self = (Villager) (Object) this;
+		VillagerProfession profession = self.getVillagerData().getProfession();
+		if (profession == VillagerProfession.SHEPHERD && TendAnimals.isDroppedProduct(stack)) {
+			// Eggs and scutes from Pasture go into stock, so it's the stock's room and cap that count.
+			cir.setReturnValue(!self.isBaby() && !ProfessionWork.isCappedInStock(this.hamlet$stock, stack)
+				&& this.hamlet$stock.canAddItem(stack));
+			return;
+		}
 		boolean wanted = HamletVillager.BREEDING_FOOD.containsKey(stack.getItem())
-			|| self.getVillagerData().getProfession() == VillagerProfession.SHEPHERD && TendAnimals.isFeed(stack);
+			|| profession == VillagerProfession.SHEPHERD && TendAnimals.wantsToPickUp(stack)
+			|| profession == VillagerProfession.FARMER && Hives.wantsToPickUp(stack);
 		cir.setReturnValue(!self.isBaby() && wanted && this.hamlet$storage.canAddItem(stack));
 	}
 
@@ -168,7 +179,9 @@ abstract class VillagerMixin implements HamletVillager {
 			return;
 		}
 		self.take(itemEntity, stack.getCount());
-		ItemStack rest = this.hamlet$storage.addItem(stack);
+		// With Pasture, a shepherd's eggs and scutes land on the ground: they're work output, so into stock.
+		boolean product = self.getVillagerData().getProfession() == VillagerProfession.SHEPHERD && TendAnimals.isDroppedProduct(stack);
+		ItemStack rest = product ? ProfessionWork.storePickedUp(this.hamlet$stock, stack) : this.hamlet$storage.addItem(stack);
 		if (rest.isEmpty()) {
 			itemEntity.discard();
 		} else {
